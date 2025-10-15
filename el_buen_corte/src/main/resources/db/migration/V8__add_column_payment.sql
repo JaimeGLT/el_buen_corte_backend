@@ -1,0 +1,2 @@
+ALTER TABLE payment
+ADD COLUMN payment_date TIMESTAMP DEFAULT NOW();

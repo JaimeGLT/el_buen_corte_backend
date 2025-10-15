@@ -1,0 +1,1 @@
+ALTER TABLE staff ADD COLUMN password TEXT NOT NULL;
