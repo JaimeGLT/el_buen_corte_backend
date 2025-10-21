@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>com.el_buen_corte</groupId>
 	<artifactId>el_buen_corte</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.0.1</version>
 	<name>el_buen_corte</name>
 	<description>Demo project for Spring Boot</description>
 	<url/>

@@ -1,5 +1,7 @@
 package com.el_buen_corte.el_buen_corte.product;
 
+import java.time.LocalDate;
+
 import com.el_buen_corte.el_buen_corte.category.Category;
 
 import lombok.AllArgsConstructor;
@@ -16,7 +18,9 @@ public class ProductResponse {
     private String name;
     private String brand;
     private Integer initialStock;
+    private LocalDate creationDate;
     private Integer minimumStock;
+    private Double price;
     private String supplier;
     private Category category;
 }

@@ -1,5 +1,6 @@
 package com.el_buen_corte.el_buen_corte.product;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -25,6 +26,8 @@ public class ProductService {
                 .name(request.getName())
                 .brand(request.getBrand())
                 .initialStock(request.getInitialStock())
+                .price(request.getPrice())
+                .creationDate(LocalDate.now())
                 .minimumStock(request.getMinimumStock())
                 .supplier(request.getSupplier())
                 .category(category)
@@ -48,7 +51,9 @@ public class ProductService {
                 .name(product.getName())
                 .brand(product.getBrand())
                 .initialStock(product.getInitialStock())
+                .creationDate(LocalDate.now())
                 .minimumStock(product.getMinimumStock())
+                .price(product.getPrice())
                 .supplier(product.getSupplier())
                 .category(product.getCategory())
                 .build();

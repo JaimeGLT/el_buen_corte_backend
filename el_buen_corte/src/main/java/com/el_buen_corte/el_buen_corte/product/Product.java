@@ -1,5 +1,6 @@
 package com.el_buen_corte.el_buen_corte.product;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import com.el_buen_corte.el_buen_corte.category.Category;
@@ -36,6 +37,9 @@ public class Product {
     @Column(name = "minimum_stock")
     private Integer minimumStock;
     private String supplier;
+    @Column(name = "creation_date")
+    private LocalDate creationDate;
+    private Double price;
     @ManyToOne
     @JoinColumn(name = "category_id")
     private Category category;

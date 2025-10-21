@@ -13,6 +13,7 @@ public class ProductRequest {
     private String brand;
     private Integer initialStock;
     private Integer minimumStock;
+    private Double price;
     private String supplier;
     private Long category;
 }
