@@ -5,13 +5,7 @@ import lombok.RequiredArgsConstructor;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -37,5 +31,10 @@ public class HairServiceController {
     @PutMapping("/{id}")
     public ResponseEntity<HairServiceResponse> updateService(@PathVariable Long id, @RequestBody HairServiceRequest request) {
         return ResponseEntity.ok(service.updateService(id, request));
+    }
+
+    @GetMapping("/reports")
+    public ResponseEntity<HairServiceReportResponse> getReportsService() {
+        return ResponseEntity.ok(service.reports());
     }
 }

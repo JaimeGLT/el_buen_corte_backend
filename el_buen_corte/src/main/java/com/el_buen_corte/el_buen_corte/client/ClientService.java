@@ -2,6 +2,8 @@ package com.el_buen_corte.el_buen_corte.client;
 
 import lombok.RequiredArgsConstructor;
 
+import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -58,24 +60,32 @@ public class ClientService {
         }
 
         private ClientResponse toResponse(Client client) {
-                return ClientResponse.builder()
-                        .id(client.getId())
-                        .firstName(client.getFirstName())
-                        .lastName(client.getLastName())
-                        .email(client.getEmail())
-                        .phoneNumber(client.getPhoneNumber())
-                        .observations(client.getObservations())
-                        .citas(client.getCitas().stream()
-                                .map(cita -> CitaResumenResponse.builder()
-                                        .id(cita.getId())
-                                        .date(cita.getDate())
-                                        .price(cita.getService().getPrice())
-                                        .service(cita.getService().getName())
-                                        .stylist(cita.getStylist().getFirstName() + " " + cita.getStylist().getLastName())
-                                        .build()
-                                ).toList()
-                                )
-                        .build();
+            List<CitaResumenResponse> citas = client.getCitas().stream()
+                    .map(cita -> CitaResumenResponse.builder()
+                            .id(cita.getId())
+                            .date(cita.getDate())
+                            .price(cita.getService().getPrice())
+                            .service(cita.getService().getName())
+                            .stylist(cita.getStylist().getFirstName() + " " + cita.getStylist().getLastName())
+                            .build()
+                    ).toList();
+
+            String lastVisit = citas.stream()
+                    .map(CitaResumenResponse::getDate)
+                    .max(Comparator.naturalOrder())
+                    .map(date -> date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
+                    .orElse(null);
+
+            return ClientResponse.builder()
+                    .id(client.getId())
+                    .firstName(client.getFirstName())
+                    .lastName(client.getLastName())
+                    .email(client.getEmail())
+                    .phoneNumber(client.getPhoneNumber())
+                    .observations(client.getObservations())
+                    .citas(citas)
+                    .lastVisit(lastVisit)
+                    .build();
         }
 
 }

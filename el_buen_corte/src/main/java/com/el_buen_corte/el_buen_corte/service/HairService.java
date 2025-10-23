@@ -28,6 +28,7 @@ public class HairService {
     private String name;
     private String description;
     private String type;
+    private boolean active = true;
     private Double price;
     @JdbcTypeCode(SqlTypes.INTERVAL_SECOND)
     private Duration duration;

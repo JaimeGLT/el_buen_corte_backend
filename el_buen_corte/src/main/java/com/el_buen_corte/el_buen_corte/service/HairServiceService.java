@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
@@ -27,17 +29,57 @@ public class HairServiceService {
                 
         hairRepository.save(newService);
 
-        return toResponse(newService);
+        return toResponse(newService, 0.00);
     }
 
     public List<HairServiceResponse> getAllServices() {
         List<HairService> services = hairRepository.findAll();
+        LocalDate start = LocalDate.now().withDayOfMonth(1); // inicio del mes
+        LocalDate end = LocalDate.now(); // hoy
+
+        Long totalServices = citaRepository.countAllServicesThisMonth(start, end);
+        List<Object[]> servicesUsedThisMonth = citaRepository.countServicesUsedInMonth(start, end);
+
+        // Crear un mapa <serviceId, totalAppointments>
+        Map<Long, Long> serviceAppointmentsMap = servicesUsedThisMonth.stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> (Long) row[2]
+                ));
+
+        // Mapear servicios a HairServiceResponse incluyendo popularidad
         return services.stream()
-                .map(service -> this.toResponse(service))
+                .map(service -> {
+                    Long appointments = serviceAppointmentsMap.getOrDefault(service.getId(), 0L);
+                    Double popularityPercentage = (totalServices != null && totalServices > 0)
+                            ? (appointments.doubleValue() / totalServices) * 100
+                            : 0.0;
+
+                    return this.toResponse(service, popularityPercentage);
+                })
                 .toList();
     }
 
-    private HairServiceResponse toResponse(HairService hairService) {
+
+    public HairServiceReportResponse reports() {
+
+        LocalDate startDate = LocalDate.now().withDayOfMonth(1);
+        LocalDate endDate = LocalDate.now();
+
+        long totalActiveServices = hairRepository.countActiveServices();
+        long totalServicesThisMonth = citaRepository.countAllServicesThisMonth(startDate, endDate);
+        double totalIncomeThisMonth = citaRepository.calculateTotalIncome(startDate, endDate);
+        double calculateAveragePriceThisMonth = totalIncomeThisMonth / totalServicesThisMonth;
+
+        return HairServiceReportResponse.builder()
+                .totalActiveServices(totalActiveServices)
+                .totalIncomeThisMonth(totalIncomeThisMonth)
+                .servicesThisMonth(totalServicesThisMonth)
+                .averagePricePerService(calculateAveragePriceThisMonth)
+                .build();
+    }
+
+    private HairServiceResponse toResponse(HairService hairService, Double popularityPercentaje) {
         return HairServiceResponse.builder()
                 .id(hairService.getId())
                 .name(hairService.getName())
@@ -45,6 +87,8 @@ public class HairServiceService {
                 .type(hairService.getType())
                 .price(hairService.getPrice())
                 .duration(hairService.getDuration())
+                .active(hairService.isActive())
+                .popularityPercentage(popularityPercentaje)
                 .build();
     }
 
@@ -58,6 +102,7 @@ public class HairServiceService {
                 .incomeGenerated(incomeGenerated)
                 .price(hairService.getPrice())
                 .duration(hairService.getDuration())
+                .active(hairService.isActive())
                 .build();
     }
 
@@ -76,8 +121,10 @@ public class HairServiceService {
         if(request.getDuration() != null)
             hairService.setDuration(request.getDuration());
 
+        hairService.setActive(request.isActive());
+
         hairRepository.save(hairService);
-        return toResponse(hairService);
+        return toResponse(hairService, 0.00);
     }
 
     public HairServiceResponse getServiceById(Long id) {

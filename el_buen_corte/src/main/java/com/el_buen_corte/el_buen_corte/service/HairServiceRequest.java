@@ -15,4 +15,5 @@ public class HairServiceRequest {;
     private String type;
     private Double price;
     private Duration duration;
+    private boolean active;
 }

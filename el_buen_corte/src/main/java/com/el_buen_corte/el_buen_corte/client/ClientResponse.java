@@ -20,5 +20,6 @@ public class ClientResponse {
     private String email;
     private String phoneNumber;
     private String observations;
+    private String lastVisit;
     private List<CitaResumenResponse> citas;
 }

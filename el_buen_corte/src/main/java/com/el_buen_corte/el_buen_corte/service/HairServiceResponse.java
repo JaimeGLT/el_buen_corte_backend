@@ -20,4 +20,6 @@ public class HairServiceResponse {
     private Duration duration;
     private Integer servicesThisMonth;
     private Double incomeGenerated;
+    private boolean active;
+    private double popularityPercentage;
 }
