@@ -28,6 +28,11 @@ public class CitaController {
         return ResponseEntity.ok(citaService.updateCita(request, id));
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<CitaResponse> getCitaById(@PathVariable Long id){
+        return ResponseEntity.ok(citaService.getCitaById(id));
+    }
+
     @PatchMapping("/{id}/cancel")
     public ResponseEntity<CitaResponse> cancelCita(@PathVariable Long id) {
         return ResponseEntity.ok(citaService.cancelCita(id));

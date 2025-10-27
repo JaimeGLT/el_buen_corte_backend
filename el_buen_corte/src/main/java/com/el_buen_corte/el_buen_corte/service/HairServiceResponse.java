@@ -17,7 +17,7 @@ public class HairServiceResponse {
     private String description;
     private String type;
     private Double price;
-    private Duration duration;
+    private long duration;
     private Integer servicesThisMonth;
     private Double incomeGenerated;
     private boolean active;

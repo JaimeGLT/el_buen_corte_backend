@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 
+import java.util.List;
+
 
 @RestController
 @RequiredArgsConstructor
@@ -35,5 +37,9 @@ public class FinancieroController {
     public ResponseEntity<FinancieroResponse> earningsVsExpensesYear() {
         return ResponseEntity.ok(financieroService.earningsVsExpensesYear());
     }
-    
+
+    @GetMapping("/expensesVsIncome")
+    public  ResponseEntity<List<IncomeExpenseResponse>> earningsVsIncome() {
+        return ResponseEntity.ok(financieroService.getYearlyIncomeExpenseReport());
+    }
 }

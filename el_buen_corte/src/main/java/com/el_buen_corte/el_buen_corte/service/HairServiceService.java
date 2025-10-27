@@ -1,7 +1,9 @@
 package com.el_buen_corte.el_buen_corte.service;
 
+import com.el_buen_corte.el_buen_corte.cita.Status;
 import lombok.RequiredArgsConstructor;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +25,7 @@ public class HairServiceService {
                 .name(request.getName())
                 .description(request.getDescription())
                 .type(request.getType())
+                .active(true)
                 .price(request.getPrice())
                 .duration(request.getDuration())
                 .build();
@@ -43,22 +46,38 @@ public class HairServiceService {
         // Crear un mapa <serviceId, totalAppointments>
         Map<Long, Long> serviceAppointmentsMap = servicesUsedThisMonth.stream()
                 .collect(Collectors.toMap(
-                        row -> (Long) row[0],
-                        row -> (Long) row[2]
+                        row -> (Long) row[0],  // serviceId
+                        row -> (Long) row[2]   // count (posición 2 según tu query)
                 ));
 
-        // Mapear servicios a HairServiceResponse incluyendo popularidad
+        // Mapear servicios a HairServiceResponse incluyendo popularidad y cantidad
         return services.stream()
                 .map(service -> {
-                    Long appointments = serviceAppointmentsMap.getOrDefault(service.getId(), 0L);
+                    Long count = serviceAppointmentsMap.getOrDefault(service.getId(), 0L); // 👈 cantidad de servicios realizados este mes
+
                     Double popularityPercentage = (totalServices != null && totalServices > 0)
-                            ? (appointments.doubleValue() / totalServices) * 100
+                            ? (count.doubleValue() / totalServices) * 100
                             : 0.0;
 
-                    return this.toResponse(service, popularityPercentage);
+                    // ingresos generados por este servicio en el mes
+                    Double incomeGenerated = citaRepository.calculateIncomeThisMonth(service.getId(), start);
+
+                    return HairServiceResponse.builder()
+                            .id(service.getId())
+                            .name(service.getName())
+                            .description(service.getDescription())
+                            .type(service.getType())
+                            .price(service.getPrice())
+                            .duration(formatDurationInMinutes(service.getDuration()))
+                            .active(service.isActive())
+                            .popularityPercentage(popularityPercentage)
+                            .servicesThisMonth(count.intValue())
+                            .incomeGenerated(incomeGenerated)
+                            .build();
                 })
                 .toList();
     }
+
 
 
     public HairServiceReportResponse reports() {
@@ -69,7 +88,7 @@ public class HairServiceService {
         long totalActiveServices = hairRepository.countActiveServices();
         long totalServicesThisMonth = citaRepository.countAllServicesThisMonth(startDate, endDate);
         double totalIncomeThisMonth = citaRepository.calculateTotalIncome(startDate, endDate);
-        double calculateAveragePriceThisMonth = totalIncomeThisMonth / totalServicesThisMonth;
+        double calculateAveragePriceThisMonth = totalServicesThisMonth > 0 ? totalIncomeThisMonth / totalServicesThisMonth : 0;
 
         return HairServiceReportResponse.builder()
                 .totalActiveServices(totalActiveServices)
@@ -86,7 +105,7 @@ public class HairServiceService {
                 .description(hairService.getDescription())
                 .type(hairService.getType())
                 .price(hairService.getPrice())
-                .duration(hairService.getDuration())
+                .duration(formatDurationInMinutes(hairService.getDuration()))
                 .active(hairService.isActive())
                 .popularityPercentage(popularityPercentaje)
                 .build();
@@ -101,7 +120,7 @@ public class HairServiceService {
                 .servicesThisMonth(servicesThisMonth)
                 .incomeGenerated(incomeGenerated)
                 .price(hairService.getPrice())
-                .duration(hairService.getDuration())
+                .duration(formatDurationInMinutes(hairService.getDuration()))
                 .active(hairService.isActive())
                 .build();
     }
@@ -137,5 +156,9 @@ public class HairServiceService {
         Double incomeGenerated = citaRepository.calculateIncomeThisMonth(id, startOfMonth);
 
         return toResponse2(hairService, servicesThisMonth, incomeGenerated);
+    }
+
+    private long formatDurationInMinutes(Duration duration) {
+        return duration.toMinutes();
     }
 }

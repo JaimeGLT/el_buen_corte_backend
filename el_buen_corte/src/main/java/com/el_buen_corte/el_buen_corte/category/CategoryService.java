@@ -4,6 +4,8 @@ import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class CategoryService {
@@ -18,6 +20,11 @@ public class CategoryService {
         return toResponse(category);
     }
 
+    public List<CategoryResponse> getAllCategories() {
+        List<Category> categories = categoryRepository.findAll();
+        return categories.stream().map(item -> toResponse(item)).toList();
+    }
+
     public CategoryResponse toResponse(Category category) {
         return CategoryResponse.builder()
             .id(category.getId().toString())
@@ -25,4 +32,5 @@ public class CategoryService {
             .build();
 
     }
+
 }

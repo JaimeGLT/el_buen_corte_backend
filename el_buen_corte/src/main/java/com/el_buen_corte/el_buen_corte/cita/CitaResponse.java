@@ -12,6 +12,7 @@ import java.time.LocalTime;
 @Data
 @Builder
 public class CitaResponse {
+    private long id;
     private LocalDate date;
     private LocalTime time;
     private Status status;

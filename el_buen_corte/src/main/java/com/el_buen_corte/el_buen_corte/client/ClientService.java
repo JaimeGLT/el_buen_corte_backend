@@ -16,7 +16,7 @@ public class ClientService {
 
         private final ClientRepository clientRepository;
 
-        public ClientResponse createClient(ClientRequest request) {
+        public String createClient(ClientRequest request) {
                 var newclient = Client.builder()
                         .firstName(request.getFirstName())
                         .lastName(request.getLastName())
@@ -26,7 +26,7 @@ public class ClientService {
                         .build();
                 clientRepository.save(newclient);
 
-                return toResponse(newclient);
+                return "Cliente creado correctamente";
         }
 
         public List<ClientResponse> getAllClients() {

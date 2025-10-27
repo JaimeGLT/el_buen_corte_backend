@@ -30,7 +30,7 @@ public class PaymentController {
     }
 
     @GetMapping("/month")
-    public ResponseEntity<Map<PaymentMethod, Double>> getAllPaymentsFromLastMonth() {
+    public ResponseEntity<PaymentMonthResponse> getAllPaymentsFromLastMonth() {
         return ResponseEntity.ok(paymentService.getAllPaymentsFromLastMonth());
 
     }
@@ -39,6 +39,15 @@ public class PaymentController {
     public ResponseEntity<List<PaymentResponse>> getAllPayments() {
         return ResponseEntity.ok(paymentService.getAllPayments());
     }
-    
+
+    @GetMapping("/reports_today")
+    public ResponseEntity<PaymentReportTodayResponse> getReportsToday() {
+        return ResponseEntity.ok(paymentService.reportsToday());
+    }
+
+    @GetMapping("/reports_month")
+    public ResponseEntity<PaymentReportMonthResponse> getReportsMonth() {
+        return ResponseEntity.ok(paymentService.reportsMonth());
+    }
     
 }

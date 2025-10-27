@@ -103,6 +103,7 @@ public class CitaService {
 
     private CitaResponse toResponse(Cita cita) {
         return CitaResponse.builder()
+                .id(cita.getId())
                 .date(cita.getDate())
                 .time(cita.getTime())
                 .client(cita.getClient())
@@ -111,5 +112,12 @@ public class CitaService {
                 .status(cita.getStatus())
                 .notes(cita.getNotes())
                 .build();
+    }
+
+    public CitaResponse getCitaById(Long id) {
+        Cita cita =  citaRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Cita not found"));
+
+        return toResponse(cita);
     }
 }

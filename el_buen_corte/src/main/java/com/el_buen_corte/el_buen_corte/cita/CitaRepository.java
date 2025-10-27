@@ -111,4 +111,17 @@ public interface CitaRepository extends JpaRepository<Cita, Long> {
         Double calculateAveragePriceThisMonth(@Param("startDate") LocalDate startDate,
                                               @Param("endDate") LocalDate endDate);
 
+    @Query("""
+    SELECT COALESCE(SUM(a.service.price), 0)
+    FROM Cita a
+    WHERE a.service.id = :serviceId
+      AND a.status <> com.el_buen_corte.el_buen_corte.cita.Status.CANCELADO
+      AND a.date >= :startDate
+      AND a.date <= :endDate
+""")
+    Double calculateIncomeThisMonthForService(@Param("serviceId") Long serviceId,
+                                              @Param("startDate") LocalDate startDate,
+                                              @Param("endDate") LocalDate endDate);
+
+
 }

@@ -1,17 +1,12 @@
 package com.el_buen_corte.el_buen_corte.product;
 
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 
 @RestController
 @RequestMapping("/api/v1/product")
@@ -40,6 +35,14 @@ public class ProductController {
         return ResponseEntity.ok(productService.getAllProductsWithLowStock());
     }
     
+    @GetMapping("/reports")
+    public ResponseEntity<ProductReportResponse> reports() {
+        return ResponseEntity.ok(productService.reports());
+    }
 
-    
+    @PutMapping("/{id}")
+    public ResponseEntity<ProductResponse> updateProduct(@PathVariable Long id, @RequestBody ProductRequest request) {
+        return ResponseEntity.ok(productService.updateProduct(id, request));
+    }
+
 }

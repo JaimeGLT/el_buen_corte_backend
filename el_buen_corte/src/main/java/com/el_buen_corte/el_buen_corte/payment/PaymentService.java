@@ -1,5 +1,6 @@
 package com.el_buen_corte.el_buen_corte.payment;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -51,14 +52,69 @@ public class PaymentService {
                 .toList();
     }
 
-    public Map<PaymentMethod, Double> getAllPaymentsFromLastMonth() {
-        List<Payment> payments = paymentRepository.findAllByPaymentDateIsThisMonth();
+    public PaymentReportTodayResponse reportsToday() {
 
-      return payments.stream()
-        .collect(Collectors.groupingBy(
-            Payment::getPaymentMethod,
-            Collectors.summingDouble(Payment::getAmount)
-        ));
+        LocalDate today = LocalDate.now();
+        LocalDateTime startOfDay = today.atStartOfDay();
+        LocalDateTime endOfDay = startOfDay.plusDays(1);
+
+        Double totalAmountToday = paymentRepository.totalAmountToday();
+        int totalPayments = paymentRepository.findAllByPaymentDateIsToday().size();
+        Double totalCashAmountToday = paymentRepository.totalAmountByMethodBetween(startOfDay, endOfDay,PaymentMethod.EFECTIVO);
+        Double totalCardAmountToday = paymentRepository.totalAmountByMethodBetween(startOfDay, endOfDay,PaymentMethod.TARJETA);
+        Double totalQRAmountToday = paymentRepository.totalAmountByMethodBetween(startOfDay, endOfDay,PaymentMethod.QR);
+
+        return PaymentReportTodayResponse.builder()
+                .totalCardAmountToday(totalCardAmountToday)
+                .totalCashAmountToday(totalCashAmountToday)
+                .totalPaymentAmountToday(totalAmountToday)
+                .totalQRAmountToday(totalQRAmountToday)
+                .totalTransactionsToday(totalPayments)
+                .build();
+    }
+
+    public PaymentReportMonthResponse reportsMonth() {
+
+        LocalDate now = LocalDate.now();
+        LocalDateTime startOfMonth = now.withDayOfMonth(1).atStartOfDay();
+        LocalDateTime endOfMonth = startOfMonth.plusMonths(1);
+
+        Double totalCardAmountMonth = paymentRepository.totalAmountByMethodBetween(startOfMonth, endOfMonth,PaymentMethod.TARJETA);
+        Double totalQRAmountMonth = paymentRepository.totalAmountByMethodBetween(startOfMonth, endOfMonth,PaymentMethod.QR);
+
+        long daysSoFar = now.getDayOfMonth();
+
+        Double totalCashAmountMonth = paymentRepository.totalAmountByMethodBetween(startOfMonth, endOfMonth,PaymentMethod.EFECTIVO);
+        Double totalAmountMonth = totalCardAmountMonth + totalCashAmountMonth + totalQRAmountMonth;
+        Double totalAmountDigital = totalCardAmountMonth + totalQRAmountMonth;
+        Double dailyAverage = totalAmountMonth/daysSoFar;
+        int totalOfTransactions = paymentRepository.findAll().size();
+
+        return PaymentReportMonthResponse.builder()
+                .totalTransactionsMonth(totalOfTransactions)
+                .totalAmountMonth(totalAmountMonth)
+                .totalCash(totalCashAmountMonth)
+                .averageDaily(dailyAverage)
+                .totalDigital(totalAmountDigital)
+                .build();
+    }
+
+    public PaymentMonthResponse getAllPaymentsFromLastMonth() {
+        LocalDate now = LocalDate.now();
+        LocalDateTime startOfMonth = now.withDayOfMonth(1).atStartOfDay();
+        LocalDateTime endOfMonth = startOfMonth.plusMonths(1);
+
+        Double totalCashAmountMonth = paymentRepository.totalAmountByMethodBetween(startOfMonth, endOfMonth,PaymentMethod.EFECTIVO);
+        Double totalCardAmountMonth = paymentRepository.totalAmountByMethodBetween(startOfMonth, endOfMonth,PaymentMethod.TARJETA);
+        Double totalQRAmountMonth = paymentRepository.totalAmountByMethodBetween(startOfMonth, endOfMonth,PaymentMethod.QR);
+        Double totalAmountMonth = totalCardAmountMonth + totalCashAmountMonth + totalQRAmountMonth;
+
+        return PaymentMonthResponse.builder()
+                .totalCashAmountMonth(totalCashAmountMonth)
+                .totalQRAmountMonth(totalQRAmountMonth)
+                .totalAmountMonth(totalAmountMonth)
+                .totalCardAmountMonth(totalCardAmountMonth)
+                .build();
 
     }
 
@@ -80,5 +136,6 @@ public class PaymentService {
                 .service(payment.getService())
                 .build();
     }
+
 
 }
