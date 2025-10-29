@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.el_buen_corte.el_buen_corte.payment.PaymentRepository;
+import com.el_buen_corte.el_buen_corte.product.ProductRepository;
 import org.springframework.stereotype.Service;
 
 import com.el_buen_corte.el_buen_corte.cita.CitaRepository;
@@ -22,26 +23,44 @@ public class FinancieroService {
     private final CitaRepository citaRepository;
     private final MovementRepository movementRepository;
     private final PaymentRepository paymentRepository;
+    private final ProductRepository productRepository;
 
     public FinancieroResponse earningsVsExpensesMonth() {
         
         LocalDate startDate = LocalDate.now().withDayOfMonth(1);
         LocalDate endDate = LocalDate.now();
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
 
         Double income = Optional.ofNullable(
-            citaRepository.calculateTotalIncome(startDate, endDate)
+            paymentRepository.getMonthlyIncomeDouble(startDateTime, endDateTime)
+        ).orElse(0.0);
+
+        Double incomeMovement = Optional.ofNullable(
+            movementRepository.calculateTotalIncomeMovement(startDate, endDate)
+        ).orElse(0.0);
+
+        Double priceTotalProductos = Optional.ofNullable(
+            productRepository.sumTotalPriceCreatedByDate(startDate, endDate)
         ).orElse(0.0);
 
         Double expenses = Optional.ofNullable(
             movementRepository.calculateTotalExpenses(startDate, endDate)
         ).orElse(0.0);
 
-        Double netProfit = income - expenses;
+        Double netProfit = (income + incomeMovement) - (expenses + priceTotalProductos);
+
+        Long totalAppointments = citaRepository.countAllServicesThisMonth(startDate, endDate);
+
+        Double averageTicket = citaRepository.calculateAveragePriceThisMonth(startDate, endDate);
 
         return FinancieroResponse.builder()
-            .earnings(income)
-            .expenses(expenses)
+            .earnings(income + incomeMovement)
+            .expenses(expenses + priceTotalProductos)
             .netProfit(netProfit)
+            .totalAppointments(totalAppointments)
+            .averageTicket(averageTicket)
+
         .build();
     }
     public FinancieroResponse earningsVsExpensesYear() {
@@ -53,39 +72,73 @@ public class FinancieroService {
             citaRepository.calculateTotalIncome(startDate, endDate)
         ).orElse(0.0);
 
+        Double incomeMovement = Optional.ofNullable(
+                movementRepository.calculateTotalIncomeMovement(startDate, endDate)
+        ).orElse(0.0);
+
+        Double priceTotalProductos = Optional.ofNullable(
+                productRepository.sumTotalPriceCreatedByDate(startDate, endDate)
+        ).orElse(0.0);
+
         Double expenses = Optional.ofNullable(
             movementRepository.calculateTotalExpenses(startDate, endDate)
         ).orElse(0.0);
 
-        Double netProfit = income - expenses;
+        Double netProfit = (income + incomeMovement) - (expenses + priceTotalProductos);
+
+        Long totalAppointments = citaRepository.countAllServicesThisMonth(startDate, endDate);
+
+        Double averageTicket = citaRepository.calculateAveragePriceThisMonth(startDate, endDate);
 
         return FinancieroResponse.builder()
-            .earnings(income)
-            .expenses(expenses)
+            .earnings(income + incomeMovement)
+            .expenses(expenses + priceTotalProductos)
+            .totalAppointments(totalAppointments)
             .netProfit(netProfit)
+            .averageTicket(averageTicket)
         .build();
     }
 
+
+
     public FinancieroResponse earningsVsExpensesWeek() {
+
         LocalDate today = LocalDate.now();
         LocalDate startDate = today.with(java.time.DayOfWeek.MONDAY);
         LocalDate endDate = today.with(java.time.DayOfWeek.SUNDAY);
 
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+
         Double income = Optional.ofNullable(
-            citaRepository.calculateTotalIncome(startDate, endDate)
+                paymentRepository.getMonthlyIncomeDouble(startDateTime, endDateTime)
+        ).orElse(0.0);
+
+        Double incomeMovement = Optional.ofNullable(
+                movementRepository.calculateTotalIncomeMovement(startDate, endDate)
+        ).orElse(0.0);
+
+        Double priceTotalProductos = Optional.ofNullable(
+                productRepository.sumTotalPriceCreatedByDate(startDate, endDate)
         ).orElse(0.0);
 
         Double expenses = Optional.ofNullable(
-            movementRepository.calculateTotalExpenses(startDate, endDate)
+                movementRepository.calculateTotalExpenses(startDate, endDate)
         ).orElse(0.0);
 
-        Double netProfit = income - expenses;
+        Double netProfit = (income + incomeMovement) - (expenses + priceTotalProductos);
+
+        Long totalAppointments = citaRepository.countAllServicesThisMonth(startDate, endDate);
+
+        Double averageTicket = citaRepository.calculateAveragePriceThisMonth(startDate, endDate);
 
         return FinancieroResponse.builder()
-            .earnings(income)
-            .expenses(expenses)
-            .netProfit(netProfit)
-        .build();
+                .earnings(income + incomeMovement)
+                .expenses(expenses + priceTotalProductos)
+                .netProfit(netProfit)
+                .totalAppointments(totalAppointments)
+                .averageTicket(averageTicket)
+                .build();
     }
 
     public FinancieroResponse earningsVsExpensesDay() {
@@ -120,43 +173,47 @@ public class FinancieroService {
         List<Object[]> incomesRaw = paymentRepository.getMonthlyIncome(startDateTime, endDateTime);
         List<Object[]> expensesRaw = movementRepository.getMonthlyExpenses(start, end);
         List<Object[]> incomesRawProduct = movementRepository.getMonthlyIncomes(start, end);
+        List<Object[]> stockExpensesRaw = productRepository.getMonthlyProductStockValue(start, end); // 🟢 nuevo
 
-        // Inicializamos la lista de 12 meses
         List<IncomeExpenseResponse> report = new ArrayList<>();
+
         for (int i = 1; i <= 12; i++) {
+            int monthIndex = i;
 
-            // Ingresos de citas
-            int finalI2 = i;
             double income = incomesRaw.stream()
-                    .filter(r -> ((Number) r[0]).intValue() == finalI2)
+                    .filter(r -> ((Number) r[0]).intValue() == monthIndex)
                     .map(r -> ((Number) r[1]).doubleValue())
                     .findFirst().orElse(0.0);
 
-            // Ingresos de productos
-            int finalI = i;
             double incomeProducts = incomesRawProduct.stream()
-                    .filter(r -> ((Number) r[0]).intValue() == finalI)
+                    .filter(r -> ((Number) r[0]).intValue() == monthIndex)
                     .map(r -> ((Number) r[1]).doubleValue())
                     .findFirst().orElse(0.0);
 
-            // Total ingresos
             double totalIncome = income + incomeProducts;
 
-            // Gastos
-            int finalI1 = i;
             double expense = expensesRaw.stream()
-                    .filter(r -> ((Number) r[0]).intValue() == finalI1)
+                    .filter(r -> ((Number) r[0]).intValue() == monthIndex)
                     .map(r -> ((Number) r[1]).doubleValue())
                     .findFirst().orElse(0.0);
 
+            double expenseStock = stockExpensesRaw.stream()
+                    .filter(r -> ((Number) r[0]).intValue() == monthIndex)
+                    .map(r -> ((Number) r[1]).doubleValue())
+                    .findFirst().orElse(0.0);
+
+            double totalExpense = expense + expenseStock;
+
             report.add(IncomeExpenseResponse.builder()
-                    .month(i)
+                    .month(monthIndex)
                     .income(totalIncome)
-                    .expense(expense)
+                    .expense(totalExpense)
                     .build());
         }
 
         return report;
     }
+
+
 
 }

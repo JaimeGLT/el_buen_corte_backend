@@ -13,4 +13,6 @@ public class FinancieroResponse {
     private Double earnings;
     private Double expenses;
     private Double netProfit;
+    private Long totalAppointments;
+    private Double averageTicket;
 }

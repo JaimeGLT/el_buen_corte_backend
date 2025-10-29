@@ -16,6 +16,14 @@ public interface MovementRepository extends JpaRepository<Movement, Long> {
       AND a.movementDate <= :endDate
       """)
       Double calculateTotalExpenses(@Param("startDate") LocalDate startDate,
+                                          @Param("endDate") LocalDate endDate);    @Query("""
+    SELECT COALESCE(SUM(a.product.price * a.quantity), 0)
+    FROM Movement a
+    WHERE a.movementType = com.el_buen_corte.el_buen_corte.movement.MovementType.SALIDA
+      AND a.movementDate >= :startDate
+      AND a.movementDate <= :endDate
+      """)
+      Double calculateTotalIncomeMovement(@Param("startDate") LocalDate startDate,
                                           @Param("endDate") LocalDate endDate);
 
     @Query("""

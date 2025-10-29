@@ -15,13 +15,13 @@ import lombok.RequiredArgsConstructor;
 public class ServiceReportController {
     private final ServiceReportService service;
 
-    @GetMapping("/month")
-    public ResponseEntity<List<ServiceUsageDTO>> serviceUseInMonth() {
-        return ResponseEntity.ok(service.servicesUsedInMonth());
+    @GetMapping("/total_services")
+    public ResponseEntity<List<ServiceUsageResponse>> serviceUseInMonth() {
+        return ResponseEntity.ok(service.getServiceUsageIncomeAllTime());
     }
 
     @GetMapping("/total-per-week")
-    public ResponseEntity<List<DailyTotalServicesDTO>> totalServicesPerDayWeek() {
-        return ResponseEntity.ok(service.totalServicesPerDayThisWeek());
+    public ResponseEntity<List<DailyCitasResponse>> totalServicesPerDayWeek() {
+        return ResponseEntity.ok(service.getWeeklyCitasReport());
     }
 }

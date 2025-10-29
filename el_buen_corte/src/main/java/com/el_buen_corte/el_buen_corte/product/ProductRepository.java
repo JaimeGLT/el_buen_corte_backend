@@ -14,4 +14,26 @@ public interface ProductRepository extends JpaRepository<Product, Long>{
     @Query("select sum(p.initialStock * p.price) from Product p")
     public double totalProductsValue();
 
+    @Query("""
+    SELECT coalesce(sum(p.price * p.initialStock)) 
+    FROM Product p WHERE
+      p.creationDate >= :startDate
+      AND p.creationDate <= :endDate
+    """)
+    Double sumTotalPriceCreatedByDate(@Param("startDate") LocalDate startDate,
+                                   @Param("endDate") LocalDate endDate);
+
+    @Query("""
+    SELECT MONTH(p.creationDate) AS month, SUM(p.price * p.initialStock) AS total
+    FROM Product p
+    WHERE p.creationDate BETWEEN :startDate AND :endDate
+    GROUP BY MONTH(p.creationDate)
+    ORDER BY MONTH(p.creationDate)
+""")
+    List<Object[]> getMonthlyProductStockValue(
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
+
 }

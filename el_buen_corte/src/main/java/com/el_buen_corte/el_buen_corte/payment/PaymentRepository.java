@@ -71,5 +71,13 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     """)
     List<Object[]> getMonthlyIncome(@Param("startDate") LocalDateTime startDate,
                                     @Param("endDate") LocalDateTime endDate);
+    @Query("""
+        SELECT coalesce(sum(p.amount))
+        FROM Payment p WHERE
+        p.paymentDate >= :startDate
+      AND p.paymentDate <= :endDate
+    """)
+    Double getMonthlyIncomeDouble(@Param("startDate") LocalDateTime startDate,
+                                    @Param("endDate") LocalDateTime endDate);
     
 }

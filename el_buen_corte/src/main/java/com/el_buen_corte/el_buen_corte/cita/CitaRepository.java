@@ -123,5 +123,28 @@ public interface CitaRepository extends JpaRepository<Cita, Long> {
                                               @Param("startDate") LocalDate startDate,
                                               @Param("endDate") LocalDate endDate);
 
+    @Query("""
+    SELECT a.date AS day, COUNT(a) AS total
+    FROM Cita a
+    WHERE a.status <> com.el_buen_corte.el_buen_corte.cita.Status.CANCELADO
+      AND a.date BETWEEN :startDate AND :endDate
+    GROUP BY a.date
+    ORDER BY a.date
+""")
+    List<Object[]> countCitasPerDayThisWeek(@Param("startDate") LocalDate startDate,
+                                            @Param("endDate") LocalDate endDate);
+
+    @Query("""
+    SELECT a.service.name AS serviceName,
+           COUNT(a) AS totalUsed,
+           COALESCE(SUM(a.service.price), 0) AS totalGenerated
+    FROM Cita a
+    WHERE a.status <> com.el_buen_corte.el_buen_corte.cita.Status.CANCELADO
+    GROUP BY a.service.id, a.service.name
+    ORDER BY totalGenerated DESC
+""")
+    List<Object[]> getServiceUsageAndIncomeAllTime();
+
+
 
 }
