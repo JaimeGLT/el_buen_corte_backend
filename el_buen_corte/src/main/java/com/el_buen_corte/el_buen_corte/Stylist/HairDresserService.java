@@ -1,5 +1,6 @@
 package com.el_buen_corte.el_buen_corte.Stylist;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -44,6 +45,23 @@ public class HairDresserService {
         return hairdressers.stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    public HairDresserReportsResponse getReports() {
+
+        LocalDate now = LocalDate.now();
+        LocalDate startDate = now.withDayOfMonth(1);
+
+        Long totalAppointments = citaRepository.countTotalAppointments(startDate, now);
+        int totalPersonal = userRepository.findAll().size();
+        Double totalIncome = citaRepository.calculateTotalIncome(startDate, now);
+
+        return HairDresserReportsResponse.builder()
+                .totalAppointments(totalAppointments)
+                .totalPersonal(totalPersonal)
+                .totalIncome(totalIncome)
+                .build();
+
     }
 
     public List<HairdresserPerformanceResponse> getHairdresserPerformance() {

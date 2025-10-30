@@ -39,4 +39,9 @@ public class HairDresserController {
     }
     
 
+    @GetMapping("/reports")
+    public ResponseEntity<HairDresserReportsResponse> getHairDresserReports() {
+        return ResponseEntity.ok(service.getReports());
+    }
+
 }

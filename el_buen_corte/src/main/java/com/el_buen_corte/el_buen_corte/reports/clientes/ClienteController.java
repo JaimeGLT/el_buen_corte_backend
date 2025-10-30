@@ -18,21 +18,23 @@ public class ClienteController {
     
     private final ClienteService clienteService;
 
-    @GetMapping("/week")
-    public ResponseEntity<List<ClienteResponse>> getAppointmentsPerClientThisWeek() {
-        return ResponseEntity.ok(clienteService.getWeeklyClientReport());
-    }
-    
-    @GetMapping("/month")
-    public ResponseEntity<List<ClienteResponse>> getAppointmentsPerClientThisMonth() {
-        return ResponseEntity.ok(clienteService.getMonthClientReport());
+    @GetMapping("/all")
+    public ResponseEntity<List<ClienteResponse>> getClients() {
+        return ResponseEntity.ok(clienteService.getClientReport());
     }
 
-    @GetMapping("/year")
-    public ResponseEntity<List<ClienteResponse>> getAppointmentsPerClientThisYear() {
-        return ResponseEntity.ok(clienteService.getYearClientReport());
+    @GetMapping("/general_reports_month")
+    public ResponseEntity<ClienteReportResponse> getGeneralReportsMonth() {
+        return ResponseEntity.ok(clienteService.generalReportsMonth());
     }
 
-    
+    @GetMapping("/general_reports_week")
+    public ResponseEntity<ClienteReportResponse> getGeneralReportsWeek() {
+        return ResponseEntity.ok(clienteService.generalReportsWeek());
+    }
 
+    @GetMapping("/general_reports_year")
+    public ResponseEntity<ClienteReportResponse> getGeneralReportsYear() {
+        return ResponseEntity.ok(clienteService.generalReportsYear());
+    }
 }

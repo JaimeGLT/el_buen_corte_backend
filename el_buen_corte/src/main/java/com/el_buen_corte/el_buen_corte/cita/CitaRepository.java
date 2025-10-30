@@ -145,6 +145,41 @@ public interface CitaRepository extends JpaRepository<Cita, Long> {
 """)
     List<Object[]> getServiceUsageAndIncomeAllTime();
 
+    @Query("""
+    SELECT DISTINCT a.client.id,
+           a.client.firstName,
+           a.client.lastName,
+           MIN(a.date)
+    FROM Cita a
+    WHERE a.status <> com.el_buen_corte.el_buen_corte.cita.Status.CANCELADO
+    GROUP BY a.client.id, a.client.firstName, a.client.lastName
+    HAVING MIN(a.date) BETWEEN :startDate AND :endDate
+""")
+    List<Object[]> findNewClientsThisMonth(@Param("startDate") LocalDate startDate,
+                                           @Param("endDate") LocalDate endDate);
 
+    @Query("""
+    SELECT a.client.id,
+           a.client.firstName,
+           a.client.lastName,
+           COUNT(a) AS totalAppointments,
+           COALESCE(SUM(a.service.price), 0) AS totalSpent
+    FROM Cita a
+    WHERE a.status <> com.el_buen_corte.el_buen_corte.cita.Status.CANCELADO
+    GROUP BY a.client.id, a.client.firstName, a.client.lastName
+    ORDER BY totalSpent DESC
+""")
+    List<Object[]> countAppointmentsAndTotalSpentPerClientAllTime();
+
+    @Query("""
+    SELECT COUNT(a)
+    FROM Cita a
+    WHERE 
+      a.status <> com.el_buen_corte.el_buen_corte.cita.Status.CANCELADO
+      AND a.date >= :startDate
+      AND a.date <= :endDate
+""")
+    Long countTotalAppointments(@Param("startDate") LocalDate startDate,
+                                @Param("endDate") LocalDate endDate);
 
 }

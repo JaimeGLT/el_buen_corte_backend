@@ -10,4 +10,5 @@ public class ClienteResponse {
     private String firstName;
     private String lastName;
     private Integer totalAppointments;
+    private Double totalSpent;
 }
