@@ -13,7 +13,7 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class ClienteService {
-    
+
     private final CitaRepository citaRepository;
     private final ClientRepository clientRepository;
 
@@ -21,10 +21,9 @@ public class ClienteService {
 
         List<Object[]> clients = citaRepository.countAppointmentsAndTotalSpentPerClientAllTime();
         return clients.stream()
-            .map(this::toResponse2)
-            .toList();
+                .map(this::toResponse2)
+                .toList();
     }
-
 
     public ClienteReportResponse generalReportsMonth() {
 
@@ -40,7 +39,7 @@ public class ClienteService {
                 .sum();
 
         return ClienteReportResponse.builder()
-                .newClients(newClients )
+                .newClients(newClients)
                 .totalClients(totalClients)
                 .totalVisits(totalVisits)
                 .build();
@@ -60,7 +59,7 @@ public class ClienteService {
                 .sum();
 
         return ClienteReportResponse.builder()
-                .newClients(newClients )
+                .newClients(newClients)
                 .totalClients(totalClients)
                 .totalVisits(totalVisits)
                 .build();
@@ -80,19 +79,10 @@ public class ClienteService {
                 .sum();
 
         return ClienteReportResponse.builder()
-                .newClients(newClients )
+                .newClients(newClients)
                 .totalClients(totalClients)
                 .totalVisits(totalVisits)
                 .build();
-    }
-
-    private ClienteResponse toResponse(Object[] row) {
-        return ClienteResponse.builder()
-            .id((Long) row[0])
-            .firstName((String) row[1])
-            .lastName((String) row[2])
-            .totalAppointments(((Number) row[3]).intValue())
-            .build();
     }
 
     private ClienteResponse toResponse2(Object[] client) {
@@ -104,6 +94,5 @@ public class ClienteService {
 
         return new ClienteResponse(id, firstName, lastName, totalAppointments, totalSpent);
     }
-
 
 }
