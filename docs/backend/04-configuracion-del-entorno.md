@@ -38,7 +38,10 @@
     ![](./extencion-backend.png)
 
     <br>
-7. Ejecutar el backend en el archivo `ElBuenCorteApplication.java`
+
+## Ejecucion de l Backend
+
+7. <div style="color:#7AC4ED">Opcion 1</div> Ejecutar el backend en el archivo `ElBuenCorteApplication.java`
 
     ![](./ejecutar-backend.png)
 
@@ -46,7 +49,20 @@
 
     ![](./comand-ejecutar-backend.png)
 
-    <div style=" color:#dffda7; "> Ahora se esta ejecutando el backend</div>
+    <br>
+7. <div style="color:#7AC4ED">Opcion 2</div> En el terminal en la ubicacion del backend ejecutar:
+
+    ```bash
+        cd el_buen_corte_backend
+    ```
+    ```bash
+        cd el_buen_corte 
+    ```
+    ```bash
+        ./mvnw spring-boot:run
+    ```
+
+    <div style=" color:#dffda7; "> Ahora se esta ejecutando el backend con ambas opciones</div>
 
 # Configuración del Entorno Backend
 
@@ -97,7 +113,7 @@ Para producción, usar variables de entorno en lugar de valores hardcodeados:
 
 1. Ejecutar la aplicación:
 
-   ```
+   ```bash
    ./mvnw spring-boot:run
    ```
 

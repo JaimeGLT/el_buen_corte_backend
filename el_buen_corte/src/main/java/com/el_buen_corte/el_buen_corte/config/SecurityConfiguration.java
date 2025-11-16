@@ -31,7 +31,8 @@ public class SecurityConfiguration {
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(
-                        request -> request.requestMatchers("/api/v1/auth/**", "/api/v1/client/**").permitAll()
+                        request -> request.requestMatchers("/api/v1/auth/**", "/api/v1/client/**", "/api/v1/ai/chat")
+                                .permitAll()
                                 .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider)
