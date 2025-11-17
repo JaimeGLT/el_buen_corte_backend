@@ -18,7 +18,10 @@ public class AiController {
     @PostMapping("/chat")
     @PreAuthorize("hasRole('ADMINISTRADOR') or hasRole('RECEPCIONISTA') or hasRole('ESTILISTA')")
     public Mono<ResponseEntity<AiResponse>> chat(@RequestBody AiRequest request) {
-        return aiService.generateResponse(request.getQuestion())
-                .map(response -> ResponseEntity.ok(new AiResponse(response)));
+        // Respuesta reactiva (Mono) para integración con WebFlux
+        return Mono.fromSupplier(() -> {
+            String answer = aiService.generateResponse(request.getQuestion());
+            return ResponseEntity.ok(new AiResponse(answer));
+        });
     }
 }

@@ -91,10 +91,17 @@
             <version>0.11.5</version>
             <scope>runtime</scope>
         </dependency>
+		<!-- WebFlux para llamadas externas asincrónicas (usado en el servicio de IA) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webflux</artifactId>
         </dependency>
+		<!-- Librería Google GenAI: permite consumir modelos de IA como Gemini para generar respuestas desde el backend -->
+		<dependency>
+			<groupId>com.google.genai</groupId>
+			<artifactId>google-genai</artifactId>
+			<version>1.26.0</version>
+		</dependency>
 	</dependencies>
 
 	<build>
