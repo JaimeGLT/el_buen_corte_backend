@@ -35,7 +35,4 @@ public class HairService {
     @OneToMany(mappedBy = "service")
     @JsonIgnore
     private List<Cita> citas;
-    
-
-
 }
