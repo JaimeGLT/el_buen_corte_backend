@@ -18,7 +18,7 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class PaymentService {
-    
+
     private final PaymentRepository paymentRepository;
     private final HairRepository hairRepository;
     private final ClientRepository clientRepository;
@@ -30,14 +30,14 @@ public class PaymentService {
 
         Client client = clientRepository.findById(request.getClientId())
                 .orElseThrow(() -> new RuntimeException("Client not found"));
-                
+
         Payment payment = Payment.builder()
-            .amount(request.getAmount())
-            .paymentMethod(request.getPaymentMethod())
-            .paymentDate(LocalDateTime.now())
-            .client(client)
-            .service(service)
-            .build();
+                .amount(request.getAmount())
+                .paymentMethod(request.getPaymentMethod())
+                .paymentDate(LocalDateTime.now())
+                .client(client)
+                .service(service)
+                .build();
 
         paymentRepository.save(payment);
 
@@ -60,9 +60,12 @@ public class PaymentService {
 
         Double totalAmountToday = paymentRepository.totalAmountToday();
         int totalPayments = paymentRepository.findAllByPaymentDateIsToday().size();
-        Double totalCashAmountToday = paymentRepository.totalAmountByMethodBetween(startOfDay, endOfDay,PaymentMethod.EFECTIVO);
-        Double totalCardAmountToday = paymentRepository.totalAmountByMethodBetween(startOfDay, endOfDay,PaymentMethod.TARJETA);
-        Double totalQRAmountToday = paymentRepository.totalAmountByMethodBetween(startOfDay, endOfDay,PaymentMethod.QR);
+        Double totalCashAmountToday = paymentRepository.totalAmountByMethodBetween(startOfDay, endOfDay,
+                PaymentMethod.EFECTIVO);
+        Double totalCardAmountToday = paymentRepository.totalAmountByMethodBetween(startOfDay, endOfDay,
+                PaymentMethod.TARJETA);
+        Double totalQRAmountToday = paymentRepository.totalAmountByMethodBetween(startOfDay, endOfDay,
+                PaymentMethod.QR);
 
         return PaymentReportTodayResponse.builder()
                 .totalCardAmountToday(totalCardAmountToday)
@@ -79,15 +82,18 @@ public class PaymentService {
         LocalDateTime startOfMonth = now.withDayOfMonth(1).atStartOfDay();
         LocalDateTime endOfMonth = startOfMonth.plusMonths(1);
 
-        Double totalCardAmountMonth = paymentRepository.totalAmountByMethodBetween(startOfMonth, endOfMonth,PaymentMethod.TARJETA);
-        Double totalQRAmountMonth = paymentRepository.totalAmountByMethodBetween(startOfMonth, endOfMonth,PaymentMethod.QR);
+        Double totalCardAmountMonth = paymentRepository.totalAmountByMethodBetween(startOfMonth, endOfMonth,
+                PaymentMethod.TARJETA);
+        Double totalQRAmountMonth = paymentRepository.totalAmountByMethodBetween(startOfMonth, endOfMonth,
+                PaymentMethod.QR);
 
         long daysSoFar = now.getDayOfMonth();
 
-        Double totalCashAmountMonth = paymentRepository.totalAmountByMethodBetween(startOfMonth, endOfMonth,PaymentMethod.EFECTIVO);
+        Double totalCashAmountMonth = paymentRepository.totalAmountByMethodBetween(startOfMonth, endOfMonth,
+                PaymentMethod.EFECTIVO);
         Double totalAmountMonth = totalCardAmountMonth + totalCashAmountMonth + totalQRAmountMonth;
         Double totalAmountDigital = totalCardAmountMonth + totalQRAmountMonth;
-        Double dailyAverage = totalAmountMonth/daysSoFar;
+        Double dailyAverage = totalAmountMonth / daysSoFar;
         int totalOfTransactions = paymentRepository.findAll().size();
 
         return PaymentReportMonthResponse.builder()
@@ -104,9 +110,12 @@ public class PaymentService {
         LocalDateTime startOfMonth = now.withDayOfMonth(1).atStartOfDay();
         LocalDateTime endOfMonth = startOfMonth.plusMonths(1);
 
-        Double totalCashAmountMonth = paymentRepository.totalAmountByMethodBetween(startOfMonth, endOfMonth,PaymentMethod.EFECTIVO);
-        Double totalCardAmountMonth = paymentRepository.totalAmountByMethodBetween(startOfMonth, endOfMonth,PaymentMethod.TARJETA);
-        Double totalQRAmountMonth = paymentRepository.totalAmountByMethodBetween(startOfMonth, endOfMonth,PaymentMethod.QR);
+        Double totalCashAmountMonth = paymentRepository.totalAmountByMethodBetween(startOfMonth, endOfMonth,
+                PaymentMethod.EFECTIVO);
+        Double totalCardAmountMonth = paymentRepository.totalAmountByMethodBetween(startOfMonth, endOfMonth,
+                PaymentMethod.TARJETA);
+        Double totalQRAmountMonth = paymentRepository.totalAmountByMethodBetween(startOfMonth, endOfMonth,
+                PaymentMethod.QR);
         Double totalAmountMonth = totalCardAmountMonth + totalCashAmountMonth + totalQRAmountMonth;
 
         return PaymentMonthResponse.builder()
@@ -125,17 +134,15 @@ public class PaymentService {
                 .toList();
     }
 
-
     public PaymentResponse toResponse(Payment payment) {
         return PaymentResponse.builder()
                 .id(payment.getId())
                 .amount(payment.getAmount())
                 .paymentMethod(payment.getPaymentMethod())
-                .paymentDate(LocalDateTime.now())
+                .paymentDate(payment.getPaymentDate())
                 .client(payment.getClient())
                 .service(payment.getService())
                 .build();
     }
-
 
 }
