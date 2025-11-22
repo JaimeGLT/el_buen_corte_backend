@@ -3,6 +3,7 @@ package com.el_buen_corte.el_buen_corte.product;
 import java.time.LocalDate;
 import java.util.List;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -36,5 +37,11 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
   @Query("SELECT COUNT(p) FROM Product p WHERE p.initialStock <= p.minimumStock")
   Long lowStockProducts();
+
+  @Query("SELECT p FROM Product p WHERE p.initialStock <= p.minimumStock")
+  List<Product> findStockBajo(Pageable pageable);
+
+  // Búsqueda por nombre para el chat
+  List<Product> findByNameContainingIgnoreCase(String name, Pageable pageable);
 
 }

@@ -1,6 +1,8 @@
 package com.el_buen_corte.el_buen_corte.client;
 
-import java.time.LocalDate;
+import java.util.List;
+
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -12,5 +14,8 @@ public interface ClientRepository extends JpaRepository<Client, Long> {
     Long countAllClients();
 
     Long countByIdNotNull();
+
+    List<Client> findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(String n1, String n2,
+            Pageable pageable);
 
 }
