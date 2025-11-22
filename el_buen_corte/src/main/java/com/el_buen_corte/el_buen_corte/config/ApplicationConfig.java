@@ -14,12 +14,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import com.el_buen_corte.el_buen_corte.user.UserRepository;
 
 import lombok.RequiredArgsConstructor;
-                        
+
 @Configuration
 @RequiredArgsConstructor
 public class ApplicationConfig {
-    
-private final UserRepository userRepository;
+
+    private final UserRepository userRepository;
 
     @Bean
     public UserDetailsService userDetailsService() {
@@ -27,7 +27,7 @@ private final UserRepository userRepository;
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
     }
 
-    @Bean 
+    @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
         authProvider.setUserDetailsService(userDetailsService());

@@ -39,4 +39,9 @@ public class ClientController {
     public ResponseEntity<ClientResponse> updateClient(@PathVariable Long id, @RequestBody ClientRequest request) {
         return ResponseEntity.ok(clientService.updateClient(id, request));
     }
+
+    @GetMapping("/reports")
+    public ResponseEntity<ClientMetricsDTO> getReports() {
+        return ResponseEntity.ok(clientService.getClientMetrics());
+    }
 }

@@ -32,8 +32,15 @@ public class Client {
     @Column(name = "phone_number")
     private String phoneNumber;
     private String observations;
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDate createdAt;
     @OneToMany(mappedBy = "client")
     @JsonIgnore
     private List<Cita> citas;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDate.now();
+    }
 
 }

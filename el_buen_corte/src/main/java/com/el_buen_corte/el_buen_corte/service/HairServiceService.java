@@ -1,6 +1,5 @@
 package com.el_buen_corte.el_buen_corte.service;
 
-import com.el_buen_corte.el_buen_corte.cita.Status;
 import lombok.RequiredArgsConstructor;
 
 import java.time.Duration;
@@ -29,7 +28,7 @@ public class HairServiceService {
                 .price(request.getPrice())
                 .duration(request.getDuration())
                 .build();
-                
+
         hairRepository.save(newService);
 
         return toResponse(newService, 0.00);
@@ -46,14 +45,15 @@ public class HairServiceService {
         // Crear un mapa <serviceId, totalAppointments>
         Map<Long, Long> serviceAppointmentsMap = servicesUsedThisMonth.stream()
                 .collect(Collectors.toMap(
-                        row -> (Long) row[0],  // serviceId
-                        row -> (Long) row[2]   // count (posición 2 según tu query)
+                        row -> (Long) row[0], // serviceId
+                        row -> (Long) row[2] // count (posición 2 según tu query)
                 ));
 
         // Mapear servicios a HairServiceResponse incluyendo popularidad y cantidad
         return services.stream()
                 .map(service -> {
-                    Long count = serviceAppointmentsMap.getOrDefault(service.getId(), 0L); // 👈 cantidad de servicios realizados este mes
+                    Long count = serviceAppointmentsMap.getOrDefault(service.getId(), 0L); // 👈 cantidad de servicios
+                                                                                           // realizados este mes
 
                     Double popularityPercentage = (totalServices != null && totalServices > 0)
                             ? (count.doubleValue() / totalServices) * 100
@@ -78,8 +78,6 @@ public class HairServiceService {
                 .toList();
     }
 
-
-
     public HairServiceReportResponse reports() {
 
         LocalDate startDate = LocalDate.now().withDayOfMonth(1);
@@ -88,7 +86,9 @@ public class HairServiceService {
         long totalActiveServices = hairRepository.countActiveServices();
         long totalServicesThisMonth = citaRepository.countAllServicesThisMonth(startDate, endDate);
         double totalIncomeThisMonth = citaRepository.calculateTotalIncome(startDate, endDate);
-        double calculateAveragePriceThisMonth = totalServicesThisMonth > 0 ? totalIncomeThisMonth / totalServicesThisMonth : 0;
+        double calculateAveragePriceThisMonth = totalServicesThisMonth > 0
+                ? totalIncomeThisMonth / totalServicesThisMonth
+                : 0;
 
         return HairServiceReportResponse.builder()
                 .totalActiveServices(totalActiveServices)
@@ -111,7 +111,8 @@ public class HairServiceService {
                 .build();
     }
 
-    private HairServiceResponse toResponse2(HairService hairService, Integer servicesThisMonth, Double incomeGenerated) {
+    private HairServiceResponse toResponse2(HairService hairService, Integer servicesThisMonth,
+            Double incomeGenerated) {
         return HairServiceResponse.builder()
                 .id(hairService.getId())
                 .name(hairService.getName())
@@ -129,15 +130,15 @@ public class HairServiceService {
         HairService hairService = hairRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Service not found"));
 
-        if(request.getName() != null)
+        if (request.getName() != null)
             hairService.setName(request.getName());
-        if(request.getDescription() != null)
+        if (request.getDescription() != null)
             hairService.setDescription(request.getDescription());
-        if(request.getType() != null)
+        if (request.getType() != null)
             hairService.setType(request.getType());
-        if(request.getPrice() != null)
+        if (request.getPrice() != null)
             hairService.setPrice(request.getPrice());
-        if(request.getDuration() != null)
+        if (request.getDuration() != null)
             hairService.setDuration(request.getDuration());
 
         hairService.setActive(request.isActive());

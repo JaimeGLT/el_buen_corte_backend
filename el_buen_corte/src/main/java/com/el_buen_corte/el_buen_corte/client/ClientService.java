@@ -2,8 +2,8 @@ package com.el_buen_corte.el_buen_corte.client;
 
 import lombok.RequiredArgsConstructor;
 
-import java.time.format.DateTimeFormatter;
-import java.util.Comparator;
+import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -15,6 +15,7 @@ import com.el_buen_corte.el_buen_corte.cita.CitaResumenResponse;
 public class ClientService {
 
         private final ClientRepository clientRepository;
+        private static final int VIP_THRESHOLD = 5;
 
         public String createClient(ClientRequest request) {
                 var newclient = Client.builder()
@@ -59,6 +60,53 @@ public class ClientService {
 
                 clientRepository.save(client);
                 return toResponse(client);
+        }
+
+        public ClientMetricsDTO getClientMetrics() {
+                LocalDate now = LocalDate.now();
+                LocalDate startOfThisMonth = now.with(TemporalAdjusters.firstDayOfMonth());
+                LocalDate startOfLastMonth = now.minusMonths(1).with(TemporalAdjusters.firstDayOfMonth());
+                LocalDate endOfLastMonth = now.minusMonths(1).with(TemporalAdjusters.lastDayOfMonth());
+
+                // 1. Total Clientes
+                long totalClients = clientRepository.count();
+
+                if (totalClients == 0)
+                        return ClientMetricsDTO.builder().build(); // Retorno vacío seguro
+
+                // 2. Nuevos este mes
+                long newThisMonth = clientRepository.countNewClientsBetween(startOfThisMonth, now);
+
+                // 3. Nuevos mes anterior (para cálculo de crecimiento)
+                long newLastMonth = clientRepository.countNewClientsBetween(startOfLastMonth, endOfLastMonth);
+
+                // 4. VIPs
+                long vipCount = clientRepository.countVipClients(VIP_THRESHOLD);
+
+                // 5. Recurrentes (para retención)
+                long recurringCount = clientRepository.countRecurringClients();
+
+                // Cálculos Matemáticos
+                double vipPercentage = ((double) vipCount / totalClients) * 100;
+
+                double retentionRate = ((double) recurringCount / totalClients) * 100;
+
+                double growthPercentage = 0.0;
+                if (newLastMonth > 0) {
+                        growthPercentage = ((double) (newThisMonth - newLastMonth) / newLastMonth) * 100;
+                } else if (newThisMonth > 0) {
+                        growthPercentage = 100.0; // Crecimiento infinito si antes era 0
+                }
+
+                return ClientMetricsDTO.builder()
+                                .totalClients(totalClients)
+                                .newClientsThisMonth(newThisMonth)
+                                .vipClients(vipCount)
+                                .vipPercentage(Math.round(vipPercentage * 10.0) / 10.0) // Redondeo a 1 decimal
+                                .newClientsCurrentMonth(newThisMonth)
+                                .growthPercentage(Math.round(growthPercentage * 10.0) / 10.0)
+                                .retentionRate(Math.round(retentionRate * 10.0) / 10.0)
+                                .build();
         }
 
         private ClientResponse toResponse(Client client) {
