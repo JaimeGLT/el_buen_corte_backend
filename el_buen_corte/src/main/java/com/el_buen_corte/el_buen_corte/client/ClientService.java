@@ -79,12 +79,6 @@ public class ClientService {
                                                                         .build();
                                                 }).toList();
 
-                String lastVisit = citas.stream()
-                                .map(CitaResumenResponse::getDate)
-                                .max(Comparator.naturalOrder())
-                                .map(date -> date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
-                                .orElse(null);
-
                 return ClientResponse.builder()
                                 .id(client.getId())
                                 .firstName(client.getFirstName())
@@ -93,7 +87,7 @@ public class ClientService {
                                 .phoneNumber(client.getPhoneNumber())
                                 .observations(client.getObservations())
                                 .citas(citas)
-                                .lastVisit(lastVisit)
+                                .lastAppointment(client.getLastAppointment())
                                 .build();
         }
 

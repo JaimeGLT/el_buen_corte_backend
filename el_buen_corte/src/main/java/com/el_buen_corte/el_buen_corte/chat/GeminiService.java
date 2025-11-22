@@ -11,13 +11,16 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.el_buen_corte.el_buen_corte.chat.dto.*;
+import com.el_buen_corte.el_buen_corte.cita.Cita;
 import com.el_buen_corte.el_buen_corte.cita.CitaRepository;
 import com.el_buen_corte.el_buen_corte.cita.Status;
+import com.el_buen_corte.el_buen_corte.client.Client;
 import com.el_buen_corte.el_buen_corte.client.ClientRepository;
 import com.el_buen_corte.el_buen_corte.movement.MovementRepository;
 import com.el_buen_corte.el_buen_corte.payment.PaymentRepository;
@@ -177,6 +180,139 @@ public class GeminiService {
         }
     }
 
+    public String alertastStock() {
+        Map<String, Object> bolsaDeDatos = new HashMap<>();
+        var pageable = PageRequest.of(0, 20);
+        List<Product> productos;
+        try {
+            productos = productRepository.findStockBajo(pageable);
+
+            var listaProductos = productos.stream().map(prod -> {
+                Map<String, Object> item = new HashMap<>();
+                item.put("nombre", prod.getName());
+                item.put("stock", prod.getInitialStock());
+                item.put("stock_minimo", prod.getMinimumStock());
+                item.put("precio", prod.getPrice());
+                return item;
+            }).collect(Collectors.toList());
+
+            bolsaDeDatos.put("Alertas Stock", listaProductos);
+
+            String jsonFinal = objectMapper.writeValueAsString(bolsaDeDatos);
+            return construirPromptYEnviar("¿Cuales son los productos con bajo stock?", jsonFinal);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Error procesando la consulta global: " + e.getMessage();
+        }
+    }
+
+    public String inventario() {
+        Map<String, Object> bolsaDeDatos = new HashMap<>();
+        var pageable = PageRequest.of(0, 30);
+        List<Product> productos;
+        try {
+            productos = productRepository.inventarioACtual(pageable);
+
+            var listaProductos = productos.stream().map(prod -> {
+                Map<String, Object> item = new HashMap<>();
+                item.put("nombre", prod.getName());
+                item.put("stock", prod.getInitialStock());
+                item.put("stock_minimo", prod.getMinimumStock());
+                item.put("precio", prod.getPrice());
+                return item;
+            }).collect(Collectors.toList());
+
+            bolsaDeDatos.put("Inventario Actual", listaProductos);
+
+            String jsonFinal = objectMapper.writeValueAsString(bolsaDeDatos);
+            return construirPromptYEnviar("¿Cual es el inventario actual?", jsonFinal);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Error procesando la consulta global: " + e.getMessage();
+        }
+    }
+
+    public String clientesActivos() {
+        Map<String, Object> bolsaDeDatos = new HashMap<>();
+        LocalDate fechaLimite = LocalDate.now().minusDays(90);
+        List<Client> clientes;
+        try {
+            clientes = clientRepository.findActiveClients(fechaLimite);
+
+            var listaProductos = clientes.stream().map(cliente -> {
+                Map<String, Object> item = new HashMap<>();
+                item.put("nombre", cliente.getFirstName() + " " + cliente.getLastName());
+                item.put("ultimaCita", cliente.getLastAppointment());
+                return item;
+            }).collect(Collectors.toList());
+
+            bolsaDeDatos.put("Clientes Activos", listaProductos);
+
+            String jsonFinal = objectMapper.writeValueAsString(bolsaDeDatos);
+            return construirPromptYEnviar("¿Cuales son los clientes activos?", jsonFinal);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Error procesando la consulta global: " + e.getMessage();
+        }
+    }
+
+    public String citasPendientes() {
+        Map<String, Object> bolsaDeDatos = new HashMap<>();
+        var pageable = PageRequest.of(0, 20);
+        List<Cita> citas;
+        try {
+            citas = citaRepository.findPendientCitas(pageable);
+
+            var listaProductos = citas.stream().map(cita -> {
+                Map<String, Object> item = new HashMap<>();
+                item.put("fechaCita", cita.getDate());
+                item.put("cliente", cita.getClient().getFirstName() + " " + cita.getClient().getLastName());
+                return item;
+            }).collect(Collectors.toList());
+
+            bolsaDeDatos.put("Citas pendientes", listaProductos);
+
+            String jsonFinal = objectMapper.writeValueAsString(bolsaDeDatos);
+            return construirPromptYEnviar("¿Cuantas y cuales son las citas pendientes?", jsonFinal);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Error procesando la consulta global: " + e.getMessage();
+        }
+    }
+
+    public String ingresoDiario() {
+        Map<String, Object> bolsaDeDatos = new HashMap<>();
+        LocalDate today = LocalDate.now();
+        LocalDateTime inicioDia = today.atStartOfDay();
+        LocalDateTime finDia = today.atTime(LocalTime.MAX);
+
+        try {
+            Double totalPayments = paymentRepository.totalAmountByDate(inicioDia, finDia);
+            VentasHoyDTO totalSales = movementRepository.ventasHoy(today, today);
+
+            Double ingresosTotales = totalPayments + totalSales.monto();
+
+            Map<String, Object> item = new HashMap<>();
+
+            item.put("Total Ingresos hoy", ingresosTotales);
+            item.put("Ingresos por Servicio", totalPayments);
+            item.put("Ingresos por venta de produtos", totalSales.monto());
+
+            bolsaDeDatos.put("Ingresos del día", item);
+
+            String jsonFinal = objectMapper.writeValueAsString(bolsaDeDatos);
+            return construirPromptYEnviar("¿Cuales son los ingresos de hoy", jsonFinal);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Error procesando la consulta global: " + e.getMessage();
+        }
+    }
+
     private String construirPromptYEnviar(String pregunta, String json) {
         StringBuilder sb = new StringBuilder();
         sb.append("Eres el asistente financiero y operativo del ERP.\n");
@@ -189,6 +325,11 @@ public class GeminiService {
         sb.append("1. Analiza el JSON completo.\n");
         sb.append("- Si ves el objeto 'reporte_financiero', úsalo como la verdad absoluta.\n");
         sb.append("- 'Ganancia Neta' es lo que realmente queda en el bolsillo (Ingresos - Gastos).\n");
+        sb.append("- 'Alertas Stock' son los productos con stock bajo.\n");
+        sb.append("- 'Ingresos del día' son los ingresos del dia de hoy en Bs.\n");
+        sb.append("- 'Clientes Activos' son los clientes que tienen citas recurrentes.\n");
+        sb.append("- 'Inventario Actual' son los productos que se encuentran en el inventario.\n");
+        sb.append("- 'Citas pendientes' son las citas que estan pendientes.\n");
         sb.append(
                 "- Si el usuario pregunta por qué los gastos son X, explica que provienen de las entradas de mercancía multiplicadas por su costo.\n");
         sb.append(

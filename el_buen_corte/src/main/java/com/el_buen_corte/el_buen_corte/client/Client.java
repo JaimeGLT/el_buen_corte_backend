@@ -9,6 +9,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Entity
@@ -26,6 +27,8 @@ public class Client {
     @Column(name = "last_name")
     private String lastName;
     private String email;
+    @Column(name = "last_appointment")
+    private LocalDate lastAppointment;
     @Column(name = "phone_number")
     private String phoneNumber;
     private String observations;

@@ -1,5 +1,6 @@
 package com.el_buen_corte.el_buen_corte.client;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import com.el_buen_corte.el_buen_corte.cita.CitaResumenResponse;
@@ -21,5 +22,6 @@ public class ClientResponse {
     private String phoneNumber;
     private String observations;
     private String lastVisit;
+    private LocalDate lastAppointment;
     private List<CitaResumenResponse> citas;
 }

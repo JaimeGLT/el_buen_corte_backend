@@ -17,107 +17,112 @@ import com.el_buen_corte.el_buen_corte.user.UserRepository;
 @RequiredArgsConstructor
 public class CitaService {
 
-    private final CitaRepository citaRepository;
-    private final ClientRepository clientRepository;
-    private final HairRepository hairRepository;
-    private final UserRepository userRepository;
+        private final CitaRepository citaRepository;
+        private final ClientRepository clientRepository;
+        private final HairRepository hairRepository;
+        private final UserRepository userRepository;
 
-    public CitaResponse createCita(CitaRequest cita){
+        public CitaResponse createCita(CitaRequest cita) {
 
-        Client client = clientRepository.findById(cita.getClient())
-                .orElseThrow(() -> new IllegalArgumentException("Client not found"));
+                Client client = clientRepository.findById(cita.getClient())
+                                .orElseThrow(() -> new IllegalArgumentException("Client not found"));
 
-        User hairdresser = userRepository.findById(cita.getStylist())
-                .orElseThrow(() -> new IllegalArgumentException("Hairdresser not found"));
+                User hairdresser = userRepository.findById(cita.getStylist())
+                                .orElseThrow(() -> new IllegalArgumentException("Hairdresser not found"));
 
-        HairService service = hairRepository.findById(cita.getService())
-                .orElseThrow(() -> new IllegalArgumentException("Service not found"));
+                HairService service = hairRepository.findById(cita.getService())
+                                .orElseThrow(() -> new IllegalArgumentException("Service not found"));
 
-                
-        Cita newCita = Cita.builder()
-                .date(cita.getDate())
-                .time(cita.getTime())
-                .client(client)
-                .service(service)
-                .stylist(hairdresser)
-                .status(cita.getStatus())
-                .notes(cita.getNotes())
-                .build();
+                Cita newCita = Cita.builder()
+                                .date(cita.getDate())
+                                .time(cita.getTime())
+                                .client(client)
+                                .service(service)
+                                .stylist(hairdresser)
+                                .status(cita.getStatus())
+                                .notes(cita.getNotes())
+                                .build();
 
-        citaRepository.save(newCita);
+                client.setLastAppointment(cita.getDate());
+                clientRepository.save(client);
 
-        return toResponse(newCita);
-    }
+                citaRepository.save(newCita);
 
-    public CitaResponse updateCita(CitaRequest request, Long id) {
-        Cita cita = citaRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Cita not found"));
-
-        if(request.getClient() != null) {
-            Client client = clientRepository.findById(request.getClient())
-                    .orElseThrow(() -> new IllegalArgumentException("Client not found"));
-
-        cita.setClient(client);
+                return toResponse(newCita);
         }
 
-        if(request.getStylist() != null) {
-                User hairdresser = userRepository.findById(request.getStylist())
-                        .orElseThrow(() -> new IllegalArgumentException("Hairdresser not found"));
-                cita.setStylist(hairdresser);
+        public CitaResponse updateCita(CitaRequest request, Long id) {
+                Cita cita = citaRepository.findById(id)
+                                .orElseThrow(() -> new IllegalArgumentException("Cita not found"));
+
+                if (request.getClient() != null) {
+                        Client client = clientRepository.findById(request.getClient())
+                                        .orElseThrow(() -> new IllegalArgumentException("Client not found"));
+
+                        cita.setClient(client);
+                }
+
+                if (request.getStylist() != null) {
+                        User hairdresser = userRepository.findById(request.getStylist())
+                                        .orElseThrow(() -> new IllegalArgumentException("Hairdresser not found"));
+                        cita.setStylist(hairdresser);
+                }
+
+                if (request.getService() != null) {
+                        HairService service = hairRepository.findById(request.getService())
+                                        .orElseThrow(() -> new IllegalArgumentException("Service not found"));
+                        cita.setService(service);
+                }
+
+                if (request.getDate() != null)
+                        cita.setDate(request.getDate());
+
+                if (request.getTime() != null)
+                        cita.setTime(request.getTime());
+
+                if (request.getStatus() != null)
+                        cita.setStatus(request.getStatus());
+
+                if (request.getNotes() != null && !request.getNotes().isEmpty())
+                        cita.setNotes(request.getNotes());
+
+                citaRepository.save(cita);
+
+                return toResponse(cita);
         }
 
-        if(request.getService() != null) {
-                HairService service = hairRepository.findById(request.getService())
-                        .orElseThrow(() -> new IllegalArgumentException("Service not found"));
-                cita.setService(service);
+        public CitaResponse cancelCita(Long id) {
+                Cita cita = citaRepository.findById(id)
+                                .orElseThrow(() -> new IllegalArgumentException("Cita not found"));
+
+                cita.setStatus(Status.CANCELADO);
+                citaRepository.save(cita);
+
+                return toResponse(cita);
         }
 
-        if (request.getDate() != null) cita.setDate(request.getDate());
-        
-        if (request.getTime() != null) cita.setTime(request.getTime());
+        public List<CitaResponse> getAllCitas() {
+                List<Cita> citas = citaRepository.findAll();
+                return citas.stream().map(cita -> this.toResponse(cita)).toList();
+        }
 
-         if(request.getStatus() != null) cita.setStatus(request.getStatus());
+        private CitaResponse toResponse(Cita cita) {
+                return CitaResponse.builder()
+                                .id(cita.getId())
+                                .date(cita.getDate())
+                                .time(cita.getTime())
+                                .client(cita.getClient())
+                                .service(cita.getService())
+                                .stylist(cita.getStylist())
+                                .status(cita.getStatus())
+                                .notes(cita.getNotes())
+                                .build();
+        }
 
-        if (request.getNotes() != null && !request.getNotes().isEmpty())
-                cita.setNotes(request.getNotes());
+        public CitaResponse getCitaById(Long id) {
+                Cita cita = citaRepository.findById(id)
+                                .orElseThrow(() -> new IllegalArgumentException("Cita not found"));
 
-        citaRepository.save(cita);
-
-        return toResponse(cita);
-    }
-
-    public CitaResponse cancelCita(Long id) {
-        Cita cita = citaRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Cita not found"));
-
-        cita.setStatus(Status.CANCELADO);
-        citaRepository.save(cita);
-
-        return toResponse(cita);
-    }
-
-    public List<CitaResponse> getAllCitas() {
-        List<Cita> citas = citaRepository.findAll();
-        return citas.stream().map(cita -> this.toResponse(cita)).toList();
-    }
-
-    private CitaResponse toResponse(Cita cita) {
-        return CitaResponse.builder()
-                .id(cita.getId())
-                .date(cita.getDate())
-                .time(cita.getTime())
-                .client(cita.getClient())
-                .service(cita.getService())
-                .stylist(cita.getStylist())
-                .status(cita.getStatus())
-                .notes(cita.getNotes())
-                .build();
-    }
-
-    public CitaResponse getCitaById(Long id) {
-        Cita cita =  citaRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Cita not found"));
-
-        return toResponse(cita);
-    }
+                return toResponse(cita);
+        }
 }

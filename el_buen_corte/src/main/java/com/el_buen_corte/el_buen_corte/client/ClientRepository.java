@@ -1,10 +1,12 @@
 package com.el_buen_corte.el_buen_corte.client;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface ClientRepository extends JpaRepository<Client, Long> {
     @Query("""
@@ -17,5 +19,8 @@ public interface ClientRepository extends JpaRepository<Client, Long> {
 
     List<Client> findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(String n1, String n2,
             Pageable pageable);
+
+    @Query("SELECT c FROM Client c WHERE c.lastAppointment >= :fechaLimite")
+    List<Client> findActiveClients(@Param("fechaLimite") LocalDate fechaLimite);
 
 }

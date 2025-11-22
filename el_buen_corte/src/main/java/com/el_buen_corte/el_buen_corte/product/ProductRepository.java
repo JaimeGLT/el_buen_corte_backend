@@ -44,4 +44,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
   // Búsqueda por nombre para el chat
   List<Product> findByNameContainingIgnoreCase(String name, Pageable pageable);
 
+  @Query("SELECT p FROM Product p")
+  List<Product> inventarioACtual(Pageable pageable);
 }
