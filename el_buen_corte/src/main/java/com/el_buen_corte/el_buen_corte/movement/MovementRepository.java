@@ -15,8 +15,6 @@ public interface MovementRepository extends JpaRepository<Movement, Long> {
                         SELECT COALESCE(SUM(a.product.price * a.quantity), 0)
                         FROM Movement a
                         WHERE a.movementType = com.el_buen_corte.el_buen_corte.movement.MovementType.ENTRADA
-                          AND a.movementDate >= :startDate
-                          AND a.movementDate <= :endDate
                           """)
         Double calculateTotalExpenses(@Param("startDate") LocalDate startDate,
                         @Param("endDate") LocalDate endDate);
@@ -81,4 +79,6 @@ public interface MovementRepository extends JpaRepository<Movement, Long> {
         @Query("SELECT SUM(m.quantity * p.price) FROM Movement m JOIN m.product p " +
                         "WHERE m.movementType = 'EXIT' AND m.movementDate BETWEEN :inicio AND :fin")
         Double calcularIngresosPorSalidas(@Param("inicio") LocalDate inicio, @Param("fin") LocalDate fin);
+
+
 }

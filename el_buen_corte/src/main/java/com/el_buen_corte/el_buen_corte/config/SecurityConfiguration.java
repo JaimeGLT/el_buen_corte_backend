@@ -32,7 +32,8 @@ public class SecurityConfiguration {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(
                         request -> request.requestMatchers("/api/v1/auth/**", "/api/v1/client/**", "/api/v1/ai/chat",
-                                "/swagger-ui/**", "/api/resumen", "/v3/api-docs/**", "/swagger-ui.html")
+                                "/swagger-ui/**", "/api/resumen", "/v3/api-docs/**", "/swagger-ui.html",
+                                "/api/v1/gemini/**")
                                 .permitAll()
                                 .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -45,7 +46,7 @@ public class SecurityConfiguration {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173", "https://el-buen-corte.vercel.app"));
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173", "https://el-buen-corte.vercel.app", "https://creator.voiceflow.com/project/6924a8d167dda684f90db4bc/canvas/64dbb6696a8fab0013dba194/node/6924c3bef3d08e3e2806f54f?nodeID=6924ab25f3d08e3e2806f35e"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);

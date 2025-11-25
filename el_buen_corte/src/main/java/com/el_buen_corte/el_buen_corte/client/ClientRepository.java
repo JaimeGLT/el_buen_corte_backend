@@ -43,4 +43,6 @@ public interface ClientRepository extends JpaRepository<Client, Long> {
     @Query("SELECT COUNT(c) FROM Client c WHERE (SELECT COUNT(a) FROM Cita a WHERE a.client = c AND a.status = Status.COMPLETADO) > 1")
     long countRecurringClients();
 
+    List<Client> findByFirstNameContainingIgnoreCase(String name);
+
 }
