@@ -22,40 +22,41 @@ public class AuthenticationService {
     private final AuthenticationManager authenticationManager;
 
     public AuthenticationResponse register(RegisterRequest request) {
+        // Usar el rol del request, o por defecto ESTILISTA
+        Role userRole = request.getRole() != null ? request.getRole() : Role.ESTILISTA;
+
         var user = User.builder()
-            .firstName(request.getFirstName())
-            .lastName(request.getLastName())
-            .hairdresserRole(request.getHairdresserRole())
-            .email(request.getEmail())
-            .phoneNumber(request.getPhoneNumber())
-            .workingHoursStart(request.getWorkingHoursStart())
-            .workingHoursFinish(request.getWorkingHoursFinish())
-            .specialties(request.getSpecialties())
-            .password(passwordEncoder.encode(request.getPassword()))
-            .role(Role.ESTILISTA)
-            .build();
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .hairdresserRole(request.getHairdresserRole())
+                .email(request.getEmail())
+                .phoneNumber(request.getPhoneNumber())
+                .workingHoursStart(request.getWorkingHoursStart())
+                .workingHoursFinish(request.getWorkingHoursFinish())
+                .specialties(request.getSpecialties())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .role(userRole)
+                .build();
 
         repository.save(user);
         var jwtToken = jwtService.generateToken(user);
         return AuthenticationResponse.builder()
-            .token(jwtToken)
-            .build();
+                .token(jwtToken)
+                .build();
     }
 
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
         authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(
-                request.getEmail(),
-                request.getPassword()
-            )
-        );
+                new UsernamePasswordAuthenticationToken(
+                        request.getEmail(),
+                        request.getPassword()));
         var user = repository.findByEmail(request.getEmail())
-                    .orElseThrow();
-                    
+                .orElseThrow();
+
         var jwtToken = jwtService.generateToken(user);
         return AuthenticationResponse.builder()
-            .token(jwtToken)
-            .build();
+                .token(jwtToken)
+                .build();
     }
-    
+
 }
