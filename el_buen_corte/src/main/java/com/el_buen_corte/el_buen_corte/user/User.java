@@ -35,7 +35,7 @@ public class User implements UserDetails {
     private HairdresserRole hairdresserRole;
     @Column(unique = true, nullable = false)
     private String email;
-    @Column(name="phone_number",unique = true, nullable = false)
+    @Column(name = "phone_number", unique = true, nullable = false)
     private String phoneNumber;
     @Column(name = "working_hours_start", nullable = false)
     private LocalTime workingHoursStart;
@@ -50,12 +50,14 @@ public class User implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority(role.name()));
+        return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
     }
+
     @Override
     public String getUsername() {
         return email;
     }
+
     @Override
     public String getPassword() {
         return password;
