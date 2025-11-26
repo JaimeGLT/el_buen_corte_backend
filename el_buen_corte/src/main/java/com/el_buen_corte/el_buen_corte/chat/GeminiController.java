@@ -3,12 +3,7 @@ package com.el_buen_corte.el_buen_corte.chat;
 import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/gemini")
@@ -21,50 +16,25 @@ public class GeminiController {
         this.geminiService = geminiService;
     }
 
-    @PostMapping("/consultar")
-    public ResponseEntity<Map<String, String>> consultarIa(@RequestBody Map<String, String> request) {
+    // 1. Cambiamos a GET
+    @GetMapping("/consultar")
+    // 2. Usamos @RequestParam.
+    // Esto espera algo como: .../consultar?prompt=hola
+    public ResponseEntity<Map<String, String>> consultarIa(@RequestParam("prompt") String mensajeUsuario) {
 
-        // saca el mensaje del usuario por body
-        String mensajeUsuario = request.get("message_user");
+        System.out.println("DEBUG GET - Prompt recibido: " + mensajeUsuario);
 
+        // Validación básica
         if (mensajeUsuario == null || mensajeUsuario.isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("respuesta", "El mensaje no puede estar vacío"));
+            return ResponseEntity.badRequest().body(Map.of("respuesta", "El prompt llegó vacío."));
         }
 
-        // 2. Llamar al orquestador
+        // Limpieza básica por si Voiceflow envía comillas extra
+        mensajeUsuario = mensajeUsuario.replace("\"", "").trim();
+
+        // 3. Llamar al orquestador (igual que antes)
         String respuestaIa = geminiService.orquestarConsulta(mensajeUsuario);
 
-        // 3. Retornar JSON limpio
-        return ResponseEntity.ok(Map.of("respuesta", respuestaIa));
-    }
-
-    @GetMapping("/alertasStock")
-    public ResponseEntity<Map<String, String>> alertasStock() {
-        String respuestaIa = geminiService.alertastStock();
-        return ResponseEntity.ok(Map.of("respuesta", respuestaIa));
-    }
-
-    @GetMapping("/inventarioActual")
-    public ResponseEntity<Map<String, String>> inventario() {
-        String respuestaIa = geminiService.inventario();
-        return ResponseEntity.ok(Map.of("respuesta", respuestaIa));
-    }
-
-    @GetMapping("/clientesActivos")
-    public ResponseEntity<Map<String, String>> clientesActivos() {
-        String respuestaIa = geminiService.clientesActivos();
-        return ResponseEntity.ok(Map.of("respuesta", respuestaIa));
-    }
-
-    @GetMapping("/ingresosDia")
-    public ResponseEntity<Map<String, String>> ingresosDia() {
-        String respuestaIa = geminiService.ingresoDiario();
-        return ResponseEntity.ok(Map.of("respuesta", respuestaIa));
-    }
-
-    @GetMapping("/citasPendientes")
-    public ResponseEntity<Map<String, String>> citasPendientes() {
-        String respuestaIa = geminiService.citasPendientes();
         return ResponseEntity.ok(Map.of("respuesta", respuestaIa));
     }
 

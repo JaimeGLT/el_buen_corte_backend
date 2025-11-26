@@ -16,7 +16,7 @@ public class ProductController {
 
     @PostMapping
     public ResponseEntity<ProductResponse> createProduct(@RequestBody ProductRequest request) {
-        
+
         return ResponseEntity.ok(productService.createProduct(request));
     }
 
@@ -34,7 +34,7 @@ public class ProductController {
     public ResponseEntity<List<ProductResponse>> getProductsWithLowStock() {
         return ResponseEntity.ok(productService.getAllProductsWithLowStock());
     }
-    
+
     @GetMapping("/reports")
     public ResponseEntity<ProductReportResponse> reports() {
         return ResponseEntity.ok(productService.reports());
