@@ -65,7 +65,7 @@ public class SecurityConfiguration {
                 configuration.setAllowedOrigins(Arrays.asList(
                                 "http://localhost:5173",
                                 "https://el-buen-corte.vercel.app",
-                                "https://creator.voiceflow.com/project/6924a8d167dda684f90db4bc/canvas/64dbb6696a8fab0013dba194/node/6924c3bef3d08e3e2806f54f?nodeID=6924ab25f3d08e3e2806f35e"));
+                                "https://www.stack-ai.com/chat/692753d6af8a2a29c0f437a6-7mi9O9SUdaROWAVAee0qDE"));
                 configuration.setAllowedMethods(Arrays.asList(
                                 "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
                 configuration.setAllowedHeaders(Arrays.asList("*"));
