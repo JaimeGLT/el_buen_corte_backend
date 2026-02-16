@@ -16,7 +16,7 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class HairDresserService {
-    
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final CitaRepository citaRepository;
@@ -34,7 +34,7 @@ public class HairDresserService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(Role.ESTILISTA)
                 .build();
-                
+
         userRepository.save(newHairDresser);
 
         return toResponse(newHairDresser);
@@ -53,7 +53,7 @@ public class HairDresserService {
         LocalDate startDate = now.withDayOfMonth(1);
 
         Long totalAppointments = citaRepository.countTotalAppointments(startDate, now);
-        int totalPersonal = userRepository.findAll().size();
+        int totalPersonal = (int) userRepository.count();
         Double totalIncome = citaRepository.calculateTotalIncome(startDate, now);
 
         return HairDresserReportsResponse.builder()
@@ -68,17 +68,14 @@ public class HairDresserService {
         List<Object[]> raw = citaRepository.findHairdresserPerformanceRaw();
 
         return raw.stream().map(o -> HairdresserPerformanceResponse.builder()
-            .firstName((String) o[0])
-            .lastName((String) o[1])
-            .hairdresserRole((HairdresserRole) o[2])
-            .average(o[3] != null ? (Double) o[3] : 0.0)
-            .totalEarnings(o[4] != null ? (Double) o[4] : 0.0)
-            .totalServices(o[5] != null ? ((Long) o[5]).intValue() : 0)
-            .build()
-        ).toList();
+                .firstName((String) o[0])
+                .lastName((String) o[1])
+                .hairdresserRole((HairdresserRole) o[2])
+                .average(o[3] != null ? (Double) o[3] : 0.0)
+                .totalEarnings(o[4] != null ? (Double) o[4] : 0.0)
+                .totalServices(o[5] != null ? ((Long) o[5]).intValue() : 0)
+                .build()).toList();
     }
-
-
 
     private HairDresserResponse toResponse(User user) {
         return HairDresserResponse.builder()
