@@ -4,7 +4,6 @@ import java.time.LocalDate;
 import java.util.List;
 
 import com.el_buen_corte.el_buen_corte.movement.MovementRepository;
-import org.springframework.cglib.core.Local;
 import org.springframework.stereotype.Service;
 
 import com.el_buen_corte.el_buen_corte.category.Category;
@@ -35,7 +34,7 @@ public class ProductService {
                 .supplier(request.getSupplier())
                 .category(category)
                 .build();
-        
+
         productRepository.save(product);
 
         return toResponse(product);
@@ -95,29 +94,29 @@ public class ProductService {
     public ProductResponse updateProduct(Long id, ProductRequest request) {
         Product product = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
 
-        if(request.getCategory() != null) {
+        if (request.getCategory() != null) {
             Category category = categoryRepository.findById(request.getCategory())
                     .orElseThrow(() -> new RuntimeException("Category not found"));
 
             product.setCategory(category);
         }
 
-        if(request.getName() != null)
+        if (request.getName() != null)
             product.setName(request.getName());
 
-        if(request.getBrand() != null)
+        if (request.getBrand() != null)
             product.setBrand(request.getBrand());
 
-        if(request.getInitialStock() != null)
+        if (request.getInitialStock() != null)
             product.setInitialStock(request.getInitialStock());
 
-        if(request.getMinimumStock() != null)
+        if (request.getMinimumStock() != null)
             product.setMinimumStock(request.getMinimumStock());
 
-        if(request.getPrice() != null)
+        if (request.getPrice() != null)
             product.setPrice(request.getPrice());
 
-        if(request.getSupplier() != null)
+        if (request.getSupplier() != null)
             product.setSupplier(request.getSupplier());
 
         productRepository.save(product);

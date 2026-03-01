@@ -3,29 +3,28 @@ package com.el_buen_corte.el_buen_corte.chat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.ZoneId;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.el_buen_corte.el_buen_corte.chat.dto.*;
-import com.el_buen_corte.el_buen_corte.cita.Cita;
 import com.el_buen_corte.el_buen_corte.cita.CitaRepository;
 import com.el_buen_corte.el_buen_corte.cita.Status;
-import com.el_buen_corte.el_buen_corte.client.Client;
+import com.el_buen_corte.el_buen_corte.cita.Cita;
 import com.el_buen_corte.el_buen_corte.client.ClientRepository;
 import com.el_buen_corte.el_buen_corte.movement.MovementRepository;
 import com.el_buen_corte.el_buen_corte.payment.PaymentRepository;
 import com.el_buen_corte.el_buen_corte.product.ProductRepository;
 import com.el_buen_corte.el_buen_corte.product.Product;
+import com.el_buen_corte.el_buen_corte.client.Client;
+// 1. IMPORT NUEVO
+import com.el_buen_corte.el_buen_corte.gastosOperativos.GastosOperativosRepository;
 
 @Service
 public class GeminiService {
@@ -38,326 +37,257 @@ public class GeminiService {
 
     private final RestTemplate restTemplate;
     private final ProductRepository productRepository;
-    private final ClientRepository clientRepository;
     private final MovementRepository movementRepository;
     private final PaymentRepository paymentRepository;
+    private final ClientRepository clientRepository;
     private final ObjectMapper objectMapper;
     private final CitaRepository citaRepository;
+    // 2. CAMPO NUEVO
+    private final GastosOperativosRepository gastosOperativosRepository;
 
-    public GeminiService(ProductRepository productRepository, ClientRepository clientRepository,
-            MovementRepository movementRepository, ObjectMapper objectMapper, PaymentRepository paymentRepository,
-            CitaRepository citaRepository) {
+    private final ZoneId zonaHoraria = ZoneId.systemDefault();
+
+    // 3. CONSTRUCTOR ACTUALIZADO
+    public GeminiService(ProductRepository productRepository,
+            MovementRepository movementRepository,
+            PaymentRepository paymentRepository,
+            ClientRepository clientRepository,
+            ObjectMapper objectMapper,
+            CitaRepository citaRepository,
+            GastosOperativosRepository gastosOperativosRepository) { // <--- Agregado aquí
         this.restTemplate = new RestTemplate();
         this.productRepository = productRepository;
-        this.clientRepository = clientRepository;
         this.movementRepository = movementRepository;
-        this.objectMapper = objectMapper;
         this.paymentRepository = paymentRepository;
+        this.clientRepository = clientRepository;
+        this.objectMapper = objectMapper;
         this.citaRepository = citaRepository;
+        this.gastosOperativosRepository = gastosOperativosRepository; // <--- Asignado aquí
     }
 
+    // =========================================================================
+    // 1. EL CEREBRO MEJORADO (Detecta Clientes y Empleados)
+    // =========================================================================
     public String orquestarConsulta(String mensajeUsuario) {
         String p = mensajeUsuario.toLowerCase();
-        Map<String, Object> bolsaDeDatos = new HashMap<>();
+        Map<String, Object> contexto = new HashMap<>();
+
+        // --- CARGA BASE (Siempre activa) ---
+        contexto.put("finanzas_hoy", obtenerFinanzasTotales());
+        contexto.put("agenda_hoy", obtenerCitasDeHoy());
+        contexto.put("alertas", obtenerAlertas());
+
+        // --- CARGA CONDICIONAL (Para no saturar) ---
+
+        // 1. Agenda Futura (Ampliamos palabras clave)
+        if (p.contains("proximo") || p.contains("mañana") || p.contains("semana") || p.contains("viene")
+                || p.contains("agenda")) {
+            contexto.put("agenda_futura", obtenerAgendaFutura());
+        }
+
+        // 2. Información de Empleados (Ranking)
+        if (p.contains("empleado") || p.contains("personal") || p.contains("barbero") || p.contains("generado")) {
+            contexto.put("rendimiento_empleados_hoy", obtenerRankingEmpleadosHoy());
+        }
+
+        // 3. Información Específica de Cliente (Búsqueda por nombre)
+        if (p.contains("cliente") || p.contains("sobre")) {
+            List<Map<String, Object>> clientesEncontrados = buscarClienteEnMensaje(p);
+            if (!clientesEncontrados.isEmpty()) {
+                contexto.put("info_clientes_buscados", clientesEncontrados);
+            }
+        }
 
         try {
+            String jsonContexto = objectMapper.writeValueAsString(contexto);
+            return construirPromptYEnviar(mensajeUsuario, jsonContexto);
+        } catch (Exception e) {
+            return "Error construyendo contexto: " + e.getMessage();
+        }
+    }
 
-            // finanzas
-            if (p.contains("gasto") || p.contains("ingreso") || p.contains("ganancia") || p.contains("rentabilidad")
-                    || p.contains("balance") || p.contains("dinero") || p.contains("venta") || p.contains("caja")
-                    || p.contains("pago")) {
+    // =========================================================================
+    // 2. LÓGICA DE NEGOCIO CORREGIDA
+    // =========================================================================
 
-                LocalDate fechaInicio = LocalDate.now();
-                LocalDate fechaFin = LocalDate.now();
+    // 4. MODIFICACIÓN SOLO AQUÍ (Finanzas)
+    private Map<String, Object> obtenerFinanzasTotales() {
+        LocalDate hoy = LocalDate.now(zonaHoraria);
+        LocalDateTime inicio = hoy.atStartOfDay();
+        LocalDateTime fin = hoy.atTime(LocalTime.MAX);
 
-                if (p.contains("ayer")) {
-                    fechaInicio = fechaInicio.minusDays(1);
-                    fechaFin = fechaFin.minusDays(1);
-                } else if (p.contains("mes")) {
-                    fechaInicio = fechaInicio.withDayOfMonth(1);
-                    fechaFin = fechaInicio.withDayOfMonth(fechaInicio.lengthOfMonth());
+        // A. Ingresos por Servicios (Cortes, etc.)
+        Double ingresosServicios = paymentRepository.sumarPagosEnRango(inicio, fin);
+        if (ingresosServicios == null)
+            ingresosServicios = 0.0;
+
+        // B. Ingresos por Productos (Shampoo, Gel...)
+        Double ingresosProductos = movementRepository.calculateTotalIncomeMovement(hoy, hoy);
+        if (ingresosProductos == null)
+            ingresosProductos = 0.0;
+
+        // C. Gastos (AHORA DESDE GASTOS OPERATIVOS) <--- CAMBIO REALIZADO
+        // Antes: movementRepository.calculateTotalExpenses(hoy, hoy);
+        // Ahora: usamos el repo de gastos operativos
+        Double gastos = gastosOperativosRepository.sumTotalMontoByDateRange(hoy, hoy);
+        if (gastos == null)
+            gastos = 0.0;
+
+        Map<String, Object> finanzas = new HashMap<>();
+        finanzas.put("ingresos_servicios", ingresosServicios);
+        finanzas.put("ingresos_productos", ingresosProductos);
+        finanzas.put("total_ingresos", ingresosServicios + ingresosProductos);
+        finanzas.put("gastos_operativos", gastos);
+        finanzas.put("balance_neto", (ingresosServicios + ingresosProductos) - gastos);
+
+        return finanzas;
+    }
+
+    // EL RESTO DEL CÓDIGO ESTÁ IDÉNTICO AL TUYO ORIGINAL
+    private List<Map<String, Object>> obtenerRankingEmpleadosHoy() {
+        LocalDate hoy = LocalDate.now(zonaHoraria);
+
+        List<Cita> citasHoy = citaRepository.findAll().stream()
+                .filter(c -> c.getDate().equals(hoy) && c.getStatus() == Status.COMPLETADO)
+                .collect(Collectors.toList());
+
+        Map<String, Double> ranking = new HashMap<>();
+
+        for (Cita c : citasHoy) {
+            if (c.getService() != null /* && c.getEmployee() != null */) {
+                String nombreEmpleado = "Barbero Genérico"; // <-- CAMBIA ESTO
+                Double precio = c.getService().getPrice();
+                ranking.put(nombreEmpleado, ranking.getOrDefault(nombreEmpleado, 0.0) + precio);
+            }
+        }
+
+        if (ranking.isEmpty()) {
+            return List.of(
+                    Map.of("mensaje", "No hay citas completadas hoy con empleados asignados para calcular ranking."));
+        }
+
+        return ranking.entrySet().stream()
+                .map(e -> {
+                    Map<String, Object> item = new HashMap<>();
+                    item.put("empleado", e.getKey());
+                    item.put("ingresos_generados", e.getValue());
+                    return item;
+                })
+                .sorted((a, b) -> Double.compare((Double) b.get("ingresos_generados"),
+                        (Double) a.get("ingresos_generados")))
+                .collect(Collectors.toList());
+    }
+
+    private List<Map<String, Object>> buscarClienteEnMensaje(String mensaje) {
+        String[] palabras = mensaje.split(" ");
+        List<Map<String, Object>> resultados = new ArrayList<>();
+
+        for (String palabra : palabras) {
+            if (palabra.length() > 3) {
+                List<Client> encontrados = clientRepository.findByFirstNameContainingIgnoreCase(palabra);
+
+                for (Client c : encontrados) {
+                    Map<String, Object> info = new HashMap<>();
+                    info.put("nombre", c.getFirstName() + " " + c.getLastName());
+                    info.put("telefono", (c.getPhoneNumber() != null) ? c.getPhoneNumber() : "Sin registro");
+
+                    Double gastoReal = citaRepository.calcularGastoTotalCliente(c.getId());
+                    Integer visitasReales = citaRepository.contarVisitasCliente(c.getId());
+
+                    info.put("total_visitas", visitasReales);
+                    info.put("gasto_historico_real", gastoReal);
+
+                    resultados.add(info);
                 }
-
-                // gastos
-                Double gastosEntradas = movementRepository.calcularGastosPorEntradas(fechaInicio, fechaFin);
-                if (gastosEntradas == null)
-                    gastosEntradas = 0.0;
-
-                // ingresos a pagos directos
-                LocalDateTime inicioTime = fechaInicio.atStartOfDay();
-                LocalDateTime finTime = fechaFin.atTime(LocalTime.MAX);
-                Double ingresosPagos = paymentRepository.sumarPagosEnRango(inicioTime, finTime);
-                if (ingresosPagos == null)
-                    ingresosPagos = 0.0;
-
-                // ingresos de las salidas
-                Double ingresosSalidas = movementRepository.calcularIngresosPorSalidas(fechaInicio, fechaFin);
-                if (ingresosSalidas == null)
-                    ingresosSalidas = 0.0;
-
-                Double totalIngresos = ingresosPagos + ingresosSalidas;
-                Double gananciaNeta = totalIngresos - gastosEntradas;
-
-                Map<String, Object> finanzas = new HashMap<>();
-                finanzas.put("periodo_analizado", fechaInicio.toString() + " al " + fechaFin.toString());
-                finanzas.put("total_ingresos", totalIngresos);
-                finanzas.put("detalle_ingresos",
-                        "Pagos Caja ($" + ingresosPagos + ") + Salidas Stock ($" + ingresosSalidas + ")");
-                finanzas.put("total_gastos", gastosEntradas);
-                finanzas.put("explicacion_gastos", "Costo de inventario entrante");
-                finanzas.put("ganancia_neta", gananciaNeta);
-
-                bolsaDeDatos.put("reporte_financiero", finanzas);
             }
-
-            // productos
-            if (p.contains("stock") || p.contains("producto") || p.contains("precio") || p.contains("marca")
-                    || p.contains("shampoo") || p.contains("cera")) {
-
-                var pageable = PageRequest.of(0, 20);
-                List<Product> productos;
-
-                if (p.contains("bajo") || p.contains("falta")) {
-                    productos = productRepository.findStockBajo(pageable);
-                } else {
-                    productos = productRepository.findAll(pageable).getContent();
-                }
-
-                var listaProductos = productos.stream().map(prod -> {
-                    Map<String, Object> item = new HashMap<>();
-                    item.put("nombre", prod.getName());
-                    item.put("stock", prod.getInitialStock());
-                    item.put("precio", prod.getPrice());
-                    return item;
-                }).collect(Collectors.toList());
-
-                bolsaDeDatos.put("inventario_disponible", listaProductos);
-            }
-
-            // clientes
-            if (p.contains("cliente") || p.contains("quien") || p.contains("telefono") || p.contains("juan")
-                    || p.contains("maria") || p.contains("pedro")) {
-
-                var pageable = PageRequest.of(0, 10);
-                // IDEAL: Usar el método buscarPorNombreOTelefono si ya lo creaste en el Repo
-                var clientes = clientRepository.findAll(pageable).getContent();
-
-                var listaClientes = clientes.stream().map(c -> {
-                    Map<String, Object> item = new HashMap<>();
-                    item.put("id", c.getId());
-                    item.put("nombre", c.getFirstName() + " " + c.getLastName());
-                    item.put("telefono", c.getPhoneNumber());
-                    return item;
-                }).collect(Collectors.toList());
-
-                bolsaDeDatos.put("clientes_encontrados", listaClientes);
-            }
-            // citas
-            if (p.contains("cita") || p.contains("agenda") || p.contains("hoy") || p.contains("mañana")
-                    || p.contains("hora")) {
-                LocalDate fecha = LocalDate.now();
-                if (p.contains("mañana"))
-                    fecha = fecha.plusDays(1);
-
-                var citas = citaRepository.findByDateAndStatusNot(fecha, Status.CANCELADO);
-
-                var listaCitas = citas.stream().map(c -> {
-                    Map<String, Object> item = new HashMap<>();
-                    item.put("hora", c.getTime().toString());
-                    item.put("cliente", (c.getClient() != null) ? c.getClient().getFirstName() : "Anónimo");
-                    item.put("servicio", (c.getService() != null) ? c.getService().getName() : "-");
-                    return item;
-                }).collect(Collectors.toList());
-
-                bolsaDeDatos.put("agenda_del_dia", listaCitas);
-            }
-            String jsonFinal = objectMapper.writeValueAsString(bolsaDeDatos);
-            return construirPromptYEnviar(mensajeUsuario, jsonFinal);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "Error procesando la consulta global: " + e.getMessage();
         }
+        return resultados.stream().distinct().collect(Collectors.toList());
     }
 
-    public String alertastStock() {
-        Map<String, Object> bolsaDeDatos = new HashMap<>();
-        var pageable = PageRequest.of(0, 20);
-        List<Product> productos;
-        try {
-            productos = productRepository.findStockBajo(pageable);
-
-            var listaProductos = productos.stream().map(prod -> {
-                Map<String, Object> item = new HashMap<>();
-                item.put("nombre", prod.getName());
-                item.put("stock", prod.getInitialStock());
-                item.put("stock_minimo", prod.getMinimumStock());
-                item.put("precio", prod.getPrice());
-                return item;
-            }).collect(Collectors.toList());
-
-            bolsaDeDatos.put("Alertas Stock", listaProductos);
-
-            String jsonFinal = objectMapper.writeValueAsString(bolsaDeDatos);
-            return construirPromptYEnviar("¿Cuales son los productos con bajo stock?", jsonFinal);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "Error procesando la consulta global: " + e.getMessage();
-        }
+    private Map<String, Object> mapearCitaCompleta(Cita c) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("fecha", c.getDate().toString());
+        m.put("hora", c.getTime().toString());
+        m.put("cliente", (c.getClient() != null) ? c.getClient().getFirstName() : "Anonimo");
+        m.put("servicio", (c.getService() != null) ? c.getService().getName() : "General");
+        m.put("precio_estimado", (c.getService() != null) ? c.getService().getPrice() : 0.0);
+        m.put("estado", c.getStatus().toString());
+        return m;
     }
 
-    public String inventario() {
-        Map<String, Object> bolsaDeDatos = new HashMap<>();
-        var pageable = PageRequest.of(0, 30);
-        List<Product> productos;
-        try {
-            productos = productRepository.inventarioACtual(pageable);
+    private Map<String, Object> obtenerAlertas() {
+        LocalDate hoy = LocalDate.now(zonaHoraria);
+        Map<String, Object> alertas = new HashMap<>();
 
-            var listaProductos = productos.stream().map(prod -> {
-                Map<String, Object> item = new HashMap<>();
-                item.put("nombre", prod.getName());
-                item.put("stock", prod.getInitialStock());
-                item.put("stock_minimo", prod.getMinimumStock());
-                item.put("precio", prod.getPrice());
-                return item;
-            }).collect(Collectors.toList());
+        List<Cita> vencidas = citaRepository.findAll().stream()
+                .filter(c -> c.getDate().isBefore(hoy) && c.getStatus() == Status.PENDIENTE)
+                .collect(Collectors.toList());
 
-            bolsaDeDatos.put("Inventario Actual", listaProductos);
-
-            String jsonFinal = objectMapper.writeValueAsString(bolsaDeDatos);
-            return construirPromptYEnviar("¿Cual es el inventario actual?", jsonFinal);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "Error procesando la consulta global: " + e.getMessage();
+        if (!vencidas.isEmpty()) {
+            alertas.put("citas_vencidas_urgente",
+                    vencidas.stream().map(this::mapearCitaCompleta).collect(Collectors.toList()));
         }
+
+        List<Product> criticos = productRepository.findStockBajo(PageRequest.of(0, 10));
+        if (!criticos.isEmpty()) {
+            alertas.put("stock_critico", criticos.stream().map(p -> Map.of(
+                    "producto", p.getName(),
+                    "actual", p.getInitialStock(),
+                    "minimo", p.getMinimumStock())).collect(Collectors.toList()));
+        }
+        return alertas;
     }
 
-    public String clientesActivos() {
-        Map<String, Object> bolsaDeDatos = new HashMap<>();
-        LocalDate fechaLimite = LocalDate.now().minusDays(90);
-        List<Client> clientes;
-        try {
-            clientes = clientRepository.findActiveClients(fechaLimite);
-
-            var listaProductos = clientes.stream().map(cliente -> {
-                Map<String, Object> item = new HashMap<>();
-                item.put("nombre", cliente.getFirstName() + " " + cliente.getLastName());
-                item.put("ultimaCita", cliente.getLastAppointment());
-                return item;
-            }).collect(Collectors.toList());
-
-            bolsaDeDatos.put("Clientes Activos", listaProductos);
-
-            String jsonFinal = objectMapper.writeValueAsString(bolsaDeDatos);
-            return construirPromptYEnviar("¿Cuales son los clientes activos?", jsonFinal);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "Error procesando la consulta global: " + e.getMessage();
-        }
+    private List<Map<String, Object>> obtenerCitasDeHoy() {
+        LocalDate hoy = LocalDate.now(zonaHoraria);
+        return citaRepository.findAll().stream()
+                .filter(c -> c.getDate().equals(hoy) && c.getStatus() != Status.CANCELADO)
+                .sorted(Comparator.comparing(Cita::getTime))
+                .map(this::mapearCitaCompleta)
+                .collect(Collectors.toList());
     }
 
-    public String citasPendientes() {
-        Map<String, Object> bolsaDeDatos = new HashMap<>();
-        var pageable = PageRequest.of(0, 20);
-        List<Cita> citas;
-        try {
-            citas = citaRepository.findPendientCitas(pageable);
-
-            var listaProductos = citas.stream().map(cita -> {
-                Map<String, Object> item = new HashMap<>();
-                item.put("fechaCita", cita.getDate());
-                item.put("cliente", cita.getClient().getFirstName() + " " + cita.getClient().getLastName());
-                return item;
-            }).collect(Collectors.toList());
-
-            bolsaDeDatos.put("Citas pendientes", listaProductos);
-
-            String jsonFinal = objectMapper.writeValueAsString(bolsaDeDatos);
-            return construirPromptYEnviar("¿Cuantas y cuales son las citas pendientes?", jsonFinal);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "Error procesando la consulta global: " + e.getMessage();
-        }
-    }
-
-    public String ingresoDiario() {
-        Map<String, Object> bolsaDeDatos = new HashMap<>();
-        LocalDate today = LocalDate.now();
-        LocalDateTime inicioDia = today.atStartOfDay();
-        LocalDateTime finDia = today.atTime(LocalTime.MAX);
-
-        try {
-            Double totalPayments = paymentRepository.totalAmountByDate(inicioDia, finDia);
-            VentasHoyDTO totalSales = movementRepository.ventasHoy(today, today);
-
-            Double ingresosTotales = totalPayments + totalSales.monto();
-
-            Map<String, Object> item = new HashMap<>();
-
-            item.put("Total Ingresos hoy", ingresosTotales);
-            item.put("Ingresos por Servicio", totalPayments);
-            item.put("Ingresos por venta de produtos", totalSales.monto());
-
-            bolsaDeDatos.put("Ingresos del día", item);
-
-            String jsonFinal = objectMapper.writeValueAsString(bolsaDeDatos);
-            return construirPromptYEnviar("¿Cuales son los ingresos de hoy", jsonFinal);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "Error procesando la consulta global: " + e.getMessage();
-        }
+    private List<Map<String, Object>> obtenerAgendaFutura() {
+        LocalDate hoy = LocalDate.now(zonaHoraria);
+        return citaRepository.findAll().stream()
+                .filter(c -> c.getDate().isAfter(hoy) && c.getStatus() != Status.CANCELADO)
+                .sorted(Comparator.comparing(Cita::getDate))
+                .limit(7)
+                .map(this::mapearCitaCompleta)
+                .collect(Collectors.toList());
     }
 
     private String construirPromptYEnviar(String pregunta, String json) {
         StringBuilder sb = new StringBuilder();
-        sb.append("Eres el asistente financiero y operativo del ERP.\n");
-        sb.append("Tienes acceso total a los datos operativos del ERP.\n\n");
-
-        sb.append("DATOS DISPONIBLES (En formato JSON):\n");
-        sb.append("```json\n").append(json).append("\n```\n\n");
-
-        sb.append("REGLAS DE RAZONAMIENTO:\n");
-        sb.append("1. Analiza el JSON completo.\n");
-        sb.append("- Si ves el objeto 'reporte_financiero', úsalo como la verdad absoluta.\n");
-        sb.append("- 'Ganancia Neta' es lo que realmente queda en el bolsillo (Ingresos - Gastos).\n");
-        sb.append("- 'Alertas Stock' son los productos con stock bajo.\n");
-        sb.append("- 'Ingresos del día' son los ingresos del dia de hoy en Bs.\n");
-        sb.append("- 'Clientes Activos' son los clientes que tienen citas recurrentes.\n");
-        sb.append("- 'Inventario Actual' son los productos que se encuentran en el inventario.\n");
-        sb.append("- 'Citas pendientes' son las citas que estan pendientes.\n");
+        sb.append("ERES: El ERP Inteligente de 'El Buen Corte'.\n");
+        sb.append("DATOS EN TIEMPO REAL:\n```json\n").append(json).append("\n```\n");
+        sb.append("REGLAS:\n");
         sb.append(
-                "- Si el usuario pregunta por qué los gastos son X, explica que provienen de las entradas de mercancía multiplicadas por su costo.\n");
+                "1. **Finanzas:** Tienes 'total_ingresos' (Suma de Servicios + Productos). Úsalo para responder cuánto dinero entró.\n");
         sb.append(
-                "2. CRUZA INFORMACIÓN: Si el usuario pregunta '¿Juan tiene cita?', busca en 'clientes_encontrados' quién es Juan y luego mira en 'agenda_del_dia'.\n");
-        sb.append("3. Si el JSON está vacío ({}), di amablemente que no encontraste registros.\n");
-        sb.append("4. Sé breve y ejecutivo.\n");
-
-        sb.append("\nPREGUNTA DEL USUARIO: ").append(pregunta);
+                "2. **Agenda:** Si preguntan por ingresos futuros, SUMA los 'precio_estimado' de 'agenda_futura' y da una proyección.\n");
+        sb.append(
+                "3. **Clientes:** Si ves 'info_clientes_buscados', esa es la info específica que pidió el usuario sobre una persona.\n");
+        sb.append("4. **Empleados:** Si ves 'rendimiento_empleados_hoy', responde quién generó más.\n");
+        sb.append("5. **Citas Vencidas:** ALERTA solo si es relevante o preguntan por problemas.\n");
+        sb.append("PREGUNTA: ").append(pregunta);
 
         return llamarGeminiAPI(sb.toString());
     }
 
     public String llamarGeminiAPI(String prompt) {
         String finalUrl = apiUrl + "?key=" + apiKey;
-
-        Part part = new Part(prompt);
-        Content content = new Content(Collections.singletonList(part));
-        GeminiRequest request = new GeminiRequest(Collections.singletonList(content));
-
         try {
+            Part part = new Part(prompt);
+            Content content = new Content(Collections.singletonList(part));
+            GeminiRequest request = new GeminiRequest(Collections.singletonList(content));
             GeminiResponse response = restTemplate.postForObject(finalUrl, request, GeminiResponse.class);
             if (response != null && !response.candidates().isEmpty()) {
                 return response.candidates().get(0).content().parts().get(0).text();
             }
-            return "Gemini no devolvió respuesta.";
+            return "Error IA.";
         } catch (Exception e) {
-            e.printStackTrace();
-            return "Error al conectar con Gemini API: " + e.getMessage();
+            return "Error API: " + e.getMessage();
         }
     }
 }

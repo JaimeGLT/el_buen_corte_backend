@@ -5,14 +5,15 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
+import java.util.stream.Collectors;
 
-import com.el_buen_corte.el_buen_corte.payment.PaymentRepository;
-import com.el_buen_corte.el_buen_corte.product.ProductRepository;
 import org.springframework.stereotype.Service;
 
 import com.el_buen_corte.el_buen_corte.cita.CitaRepository;
+import com.el_buen_corte.el_buen_corte.gastosOperativos.GastosOperativosRepository;
 import com.el_buen_corte.el_buen_corte.movement.MovementRepository;
+import com.el_buen_corte.el_buen_corte.payment.PaymentRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -23,197 +24,124 @@ public class FinancieroService {
     private final CitaRepository citaRepository;
     private final MovementRepository movementRepository;
     private final PaymentRepository paymentRepository;
-    private final ProductRepository productRepository;
+    private final GastosOperativosRepository gastosOperativosRepository; // Inyectamos el nuevo repo
+
+    // ==========================================
+    // MÉTODOS PÚBLICOS (API)
+    // ==========================================
 
     public FinancieroResponse earningsVsExpensesMonth() {
-        
-        LocalDate startDate = LocalDate.now().withDayOfMonth(1);
-        LocalDate endDate = LocalDate.now();
-        LocalDateTime startDateTime = startDate.atStartOfDay();
-        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
-
-        Double income = Optional.ofNullable(
-            paymentRepository.getMonthlyIncomeDouble(startDateTime, endDateTime)
-        ).orElse(0.0);
-
-        Double incomeMovement = Optional.ofNullable(
-            movementRepository.calculateTotalIncomeMovement(startDate, endDate)
-        ).orElse(0.0);
-
-        Double priceTotalProductos = Optional.ofNullable(
-            productRepository.sumTotalPriceCreatedByDate(startDate, endDate)
-        ).orElse(0.0);
-
-        Double expenses = Optional.ofNullable(
-            movementRepository.calculateTotalExpenses(startDate, endDate)
-        ).orElse(0.0);
-
-        Double netProfit = (income + incomeMovement) - (expenses + priceTotalProductos);
-
-        Long totalAppointments = citaRepository.countAllServicesThisMonth(startDate, endDate);
-
-        Double averageTicket = citaRepository.calculateAveragePriceThisMonth(startDate, endDate);
-
-        return FinancieroResponse.builder()
-            .earnings(income + incomeMovement)
-            .expenses(expenses + priceTotalProductos)
-            .netProfit(netProfit)
-            .totalAppointments(totalAppointments)
-            .averageTicket(averageTicket)
-
-        .build();
+        LocalDate start = LocalDate.now().withDayOfMonth(1);
+        LocalDate end = LocalDate.now(); // Hasta hoy
+        return calculateMetrics(start, end);
     }
+
     public FinancieroResponse earningsVsExpensesYear() {
-        
-        LocalDate startDate = LocalDate.now().withDayOfYear(1);
-        LocalDate endDate = LocalDate.now();
-
-        Double income = Optional.ofNullable(
-            citaRepository.calculateTotalIncome(startDate, endDate)
-        ).orElse(0.0);
-
-        Double incomeMovement = Optional.ofNullable(
-                movementRepository.calculateTotalIncomeMovement(startDate, endDate)
-        ).orElse(0.0);
-
-        Double priceTotalProductos = Optional.ofNullable(
-                productRepository.sumTotalPriceCreatedByDate(startDate, endDate)
-        ).orElse(0.0);
-
-        Double expenses = Optional.ofNullable(
-            movementRepository.calculateTotalExpenses(startDate, endDate)
-        ).orElse(0.0);
-
-        Double netProfit = (income + incomeMovement) - (expenses + priceTotalProductos);
-
-        Long totalAppointments = citaRepository.countAllServicesThisMonth(startDate, endDate);
-
-        Double averageTicket = citaRepository.calculateAveragePriceThisMonth(startDate, endDate);
-
-        return FinancieroResponse.builder()
-            .earnings(income + incomeMovement)
-            .expenses(expenses + priceTotalProductos)
-            .totalAppointments(totalAppointments)
-            .netProfit(netProfit)
-            .averageTicket(averageTicket)
-        .build();
+        LocalDate start = LocalDate.now().withDayOfYear(1);
+        LocalDate end = LocalDate.now();
+        return calculateMetrics(start, end);
     }
-
-
 
     public FinancieroResponse earningsVsExpensesWeek() {
-
         LocalDate today = LocalDate.now();
-        LocalDate startDate = today.with(java.time.DayOfWeek.MONDAY);
-        LocalDate endDate = today.with(java.time.DayOfWeek.SUNDAY);
+        LocalDate start = today.with(java.time.DayOfWeek.MONDAY);
+        LocalDate end = today.with(java.time.DayOfWeek.SUNDAY);
+        return calculateMetrics(start, end);
+    }
 
+    public FinancieroResponse earningsVsExpensesDay() {
+        LocalDate today = LocalDate.now();
+        return calculateMetrics(today, today);
+    }
+
+    // ==========================================
+    // LÓGICA CENTRALIZADA (DRY PRINCIPLE)
+    // ==========================================
+
+    private FinancieroResponse calculateMetrics(LocalDate startDate, LocalDate endDate) {
+        // Mantenemos LocalDateTime SOLO para Payments (porque Payments si usa fecha y
+        // hora exacta)
         LocalDateTime startDateTime = startDate.atStartOfDay();
         LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
 
-        Double income = Optional.ofNullable(
-                paymentRepository.getMonthlyIncomeDouble(startDateTime, endDateTime)
-        ).orElse(0.0);
+        // 1. INGRESOS (Payments usa LocalDateTime)
+        Double incomeFromPayments = paymentRepository.getMonthlyIncomeDouble(startDateTime, endDateTime);
+        Double incomeFromMovements = movementRepository.calculateTotalIncomeMovement(startDate, endDate);
 
-        Double incomeMovement = Optional.ofNullable(
-                movementRepository.calculateTotalIncomeMovement(startDate, endDate)
-        ).orElse(0.0);
+        double totalIncome = (incomeFromPayments != null ? incomeFromPayments : 0.0)
+                + (incomeFromMovements != null ? incomeFromMovements : 0.0);
 
-        Double priceTotalProductos = Optional.ofNullable(
-                productRepository.sumTotalPriceCreatedByDate(startDate, endDate)
-        ).orElse(0.0);
+        // 2. GASTOS (CORRECCIÓN AQUÍ)
+        // Usamos startDate y endDate directos (LocalDate), SIN convertir a
+        // LocalDateTime
+        Double totalExpenses = gastosOperativosRepository.sumTotalMontoByDateRange(startDate, endDate);
 
-        Double expenses = Optional.ofNullable(
-                movementRepository.calculateTotalExpenses(startDate, endDate)
-        ).orElse(0.0);
+        if (totalExpenses == null)
+            totalExpenses = 0.0;
 
-        Double netProfit = (income + incomeMovement) - (expenses + priceTotalProductos);
-
+        // 3. CÁLCULOS
+        double netProfit = totalIncome - totalExpenses;
         Long totalAppointments = citaRepository.countAllServicesThisMonth(startDate, endDate);
-
         Double averageTicket = citaRepository.calculateAveragePriceThisMonth(startDate, endDate);
+        if (averageTicket == null)
+            averageTicket = 0.0;
 
         return FinancieroResponse.builder()
-                .earnings(income + incomeMovement)
-                .expenses(expenses + priceTotalProductos)
+                .earnings(totalIncome)
+                .expenses(totalExpenses)
                 .netProfit(netProfit)
-                .totalAppointments(totalAppointments)
+                .totalAppointments(totalAppointments != null ? totalAppointments : 0L)
                 .averageTicket(averageTicket)
                 .build();
     }
 
-    public FinancieroResponse earningsVsExpensesDay() {
-        LocalDate startDate = LocalDate.now();
-        LocalDate endDate = LocalDate.now();
-
-        Double income = Optional.ofNullable(
-            citaRepository.calculateTotalIncome(startDate, endDate)
-        ).orElse(0.0);
-
-        Double expenses = Optional.ofNullable(
-            movementRepository.calculateTotalExpenses(startDate, endDate)
-        ).orElse(0.0);
-
-        Double netProfit = income - expenses;
-
-        return FinancieroResponse.builder()
-            .earnings(income)
-            .expenses(expenses)
-            .netProfit(netProfit)
-        .build();
-    }
+    // ==========================================
+    // REPORTE ANUAL (GRÁFICOS)
+    // ==========================================
 
     public List<IncomeExpenseResponse> getYearlyIncomeExpenseReport() {
-
         LocalDate start = LocalDate.now().withDayOfYear(1);
         LocalDate end = LocalDate.now().withMonth(12).withDayOfMonth(31);
 
         LocalDateTime startDateTime = start.atStartOfDay();
         LocalDateTime endDateTime = end.atTime(LocalTime.MAX);
 
-        List<Object[]> incomesRaw = paymentRepository.getMonthlyIncome(startDateTime, endDateTime);
-        List<Object[]> expensesRaw = movementRepository.getMonthlyExpenses(start, end);
-        List<Object[]> incomesRawProduct = movementRepository.getMonthlyIncomes(start, end);
-        List<Object[]> stockExpensesRaw = productRepository.getMonthlyProductStockValue(start, end); // 🟢 nuevo
+        List<Object[]> incomesPayments = paymentRepository.getMonthlyIncome(startDateTime, endDateTime);
+        List<Object[]> incomesMovements = movementRepository.getMonthlyIncomes(start, end);
+
+        // CORRECCIÓN AQUÍ: Pasa LocalDate (start, end) en lugar de LocalDateTime
+        List<Object[]> expensesOperativos = gastosOperativosRepository.getMonthlyGastos(start, end);
+
+        // Convertimos List<Object[]> a Map<Mes, Monto> para acceso rápido
+        Map<Integer, Double> paymentsMap = convertToMap(incomesPayments);
+        Map<Integer, Double> movementsMap = convertToMap(incomesMovements);
+        Map<Integer, Double> expensesMap = convertToMap(expensesOperativos);
 
         List<IncomeExpenseResponse> report = new ArrayList<>();
 
-        for (int i = 1; i <= 12; i++) {
-            int monthIndex = i;
-
-            double income = incomesRaw.stream()
-                    .filter(r -> ((Number) r[0]).intValue() == monthIndex)
-                    .map(r -> ((Number) r[1]).doubleValue())
-                    .findFirst().orElse(0.0);
-
-            double incomeProducts = incomesRawProduct.stream()
-                    .filter(r -> ((Number) r[0]).intValue() == monthIndex)
-                    .map(r -> ((Number) r[1]).doubleValue())
-                    .findFirst().orElse(0.0);
-
-            double totalIncome = income + incomeProducts;
-
-            double expense = expensesRaw.stream()
-                    .filter(r -> ((Number) r[0]).intValue() == monthIndex)
-                    .map(r -> ((Number) r[1]).doubleValue())
-                    .findFirst().orElse(0.0);
-
-            double expenseStock = stockExpensesRaw.stream()
-                    .filter(r -> ((Number) r[0]).intValue() == monthIndex)
-                    .map(r -> ((Number) r[1]).doubleValue())
-                    .findFirst().orElse(0.0);
-
-            double totalExpense = expense + expenseStock;
+        for (int month = 1; month <= 12; month++) {
+            double income = paymentsMap.getOrDefault(month, 0.0) + movementsMap.getOrDefault(month, 0.0);
+            double expense = expensesMap.getOrDefault(month, 0.0);
 
             report.add(IncomeExpenseResponse.builder()
-                    .month(monthIndex)
-                    .income(totalIncome)
-                    .expense(totalExpense)
+                    .month(month)
+                    .income(income)
+                    .expense(expense)
                     .build());
         }
 
         return report;
     }
 
-
-
+    // Helper para convertir las respuestas raras de SQL (Object[]) a un Mapa fácil
+    // de usar en Java
+    private Map<Integer, Double> convertToMap(List<Object[]> rawList) {
+        return rawList.stream()
+                .collect(Collectors.toMap(
+                        row -> ((Number) row[0]).intValue(), // Key: Mes
+                        row -> ((Number) row[1]).doubleValue(), // Value: Monto
+                        (existing, replacement) -> existing // En caso de duplicados (no debería pasar), mantén el
+                                                            // existente
+                ));
+    }
 }

@@ -228,4 +228,15 @@ public interface CitaRepository extends JpaRepository<Cita, Long> {
     @Query("SELECT c FROM Cita c WHERE c.status = Status.PENDIENTE")
     List<Cita> findPendientCitas(Pageable pageable);
 
+// En CitaRepository.java
+
+    // 1. Para calcular gasto histórico del cliente
+// Sumamos el precio del servicio de todas las citas COMPLETADAS de ese cliente
+    @Query("SELECT COALESCE(SUM(s.price), 0) FROM Cita c JOIN c.service s WHERE c.client.id = :clientId AND c.status = com.el_buen_corte.el_buen_corte.cita.Status.COMPLETADO")
+    Double calcularGastoTotalCliente(@Param("clientId") Long clientId);
+
+    // 2. Para contar visitas reales
+    @Query("SELECT COUNT(c) FROM Cita c WHERE c.client.id = :clientId AND c.status = com.el_buen_corte.el_buen_corte.cita.Status.COMPLETADO")
+    Integer contarVisitasCliente(@Param("clientId") Long clientId);
+
 }
